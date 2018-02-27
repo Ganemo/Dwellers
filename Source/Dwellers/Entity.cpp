@@ -28,10 +28,11 @@ AEntity::AEntity()
 	SkeletalMesh->SetComponentTickEnabled(false);
 	SkeletalMesh->SetComponentTickInterval(0);
 
-	MovementComponent = CreateDefaultSubobject<UInterpToMovementComponent>("Movement");
+	MovementComponent = CreateDefaultSubobject<UBasicMovementComponent>("Movement");
 	MovementComponent->bAutoActivate = true;
-	MovementComponent->bPauseOnImpact = false;
-	MovementComponent->BehaviourType = EInterpToBehaviourType::OneShot;
+	MovementComponent->bWantsInitializeComponent = true;
+	/*MovementComponent->bPauseOnImpact = false;
+	MovementComponent->BehaviourType = EInterpToBehaviourType::OneShot;*/
 	MovementComponent->bTickBeforeOwner = false;
 }
 
@@ -72,7 +73,7 @@ void AEntity::Tick(float DeltaTime)
 				rot.Pitch = 0;
 				rot.Roll = 0;
 
-				SkeletalMesh->SetWorldRotation(FMath::RInterpTo(SkeletalMesh->GetComponentRotation(), rot, DeltaTime, 2));
+				SkeletalMesh->SetWorldRotation(FMath::RInterpTo(SkeletalMesh->GetComponentRotation(), rot, DeltaTime, vel.Size()/2));
 			}
 		}
 	}

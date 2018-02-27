@@ -47,6 +47,52 @@ void AGodCameraController::SetupInputComponent()
 	this->InputComponent->BindAction("LeftClick", EInputEvent::IE_Released, this, &AGodCameraController::LeftClick_Up);
 }
 
+void AGodCameraController::Tick(float dt)
+{
+	FVector loc;
+	FVector dir;
+
+	if (DeprojectMousePositionToWorld(loc, dir))
+	{
+		FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("RV_Trace")), false, this);
+		RV_TraceParams.bTraceComplex = false;
+		RV_TraceParams.bTraceAsyncScene = true;
+		RV_TraceParams.bReturnPhysicalMaterial = false;
+		RV_TraceParams.TraceTag = TraceTag;
+
+		//Re-initialize hit info
+		FHitResult RV_Hit(ForceInit);
+
+		//call GetWorld() from within an actor extending class
+		GetWorld()->LineTraceSingleByChannel(
+			RV_Hit,        //result
+			loc,    //start
+			loc + (dir * 20000), //end
+			ECC_GameTraceChannel2, //collision channel
+			RV_TraceParams
+		);
+
+		if (RV_Hit.bBlockingHit)
+		{
+			TTile* til = GameEncapsulator::GetGame()->map->GetTileAtLocation(FVector(RV_Hit.ImpactPoint.X + GameEncapsulator::GetGame()->map->cellsize / 2, RV_Hit.ImpactPoint.Y + GameEncapsulator::GetGame()->map->cellsize / 2, 0));
+			if (til != nullptr)
+			{
+				DrawDebugBox(
+					GetWorld(),
+					FVector(
+						til->location->x * GameEncapsulator::GetGame()->map->cellsize,
+						til->location->y * GameEncapsulator::GetGame()->map->cellsize,
+						til->height * GameEncapsulator::GetGame()->map->cliffheight * GameEncapsulator::GetGame()->map->cellsize),
+					FVector(GameEncapsulator::GetGame()->map->cellsize / 2, GameEncapsulator::GetGame()->map->cellsize / 2, 1),
+					FColor(255, 0, 0),
+					false, -1, 0,
+					12.333
+				);
+			}
+		}
+	}
+}
+
 void AGodCameraController::Zoom(float axisvalue)
 {
 	if (ControllingPlayer != nullptr)

@@ -4,6 +4,11 @@
 #include "TileObject.h"
 #include "WorldMap.h"
 
+FVector TTile::GetTileLocationAsVector()
+{
+	return FVector(GameEncapsulator::GetGame()->map->cellsize * location->x, GameEncapsulator::GetGame()->map->cellsize * location->y, GameEncapsulator::GetGame()->map->cellsize * GameEncapsulator::GetGame()->map->cliffheight * height);
+}
+
 void TTile::RemoveObject()
 {
 	if (object != nullptr)

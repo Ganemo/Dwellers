@@ -26,6 +26,7 @@ public:
 	virtual void BeginPlay() override;
 	virtual void Possess(APawn* plyr) override;
 	virtual void SetupInputComponent() override;
+	virtual void Tick(float dt) override;
 
 
 	void Zoom(float axisval);

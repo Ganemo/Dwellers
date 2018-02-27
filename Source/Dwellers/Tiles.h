@@ -53,6 +53,8 @@ public:
 		height = hght;
 	}
 
+	FVector TTile::GetTileLocationAsVector();
+
 	void TTile::RemoveObject();
 
 	virtual bool TTile::IsTraversable() { return true; }

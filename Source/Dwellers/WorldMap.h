@@ -3,10 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "WorldChunk.h"
-#include "Tiles.h"
-#include "TileObject.h"
+#include "PathNavigation.h"
 
+class TTile;
 /**
  * 
  */
@@ -30,10 +29,12 @@ public:
 
 	TArray<TMap<TTile*, TTile*>> heightchunks;
 
-	TArray<AWorldChunk*> chunks;
+	TArray<class AWorldChunk*> chunks;
 	TMap<int, int> waterchunkheight;
 
 	AWorldChunk* FindChunkWithTile(TTile* tile);
+
+	FPathNavigationHandler PathHandler;
 	void MakeTileRoad(TTile* tile);
 
 private:

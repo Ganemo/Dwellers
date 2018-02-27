@@ -7,6 +7,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/InterpToMovementComponent.h"
+#include "BasicMovementComponent.h"
 #include "GodCamera.h"
 #include "Entity.generated.h"
 
@@ -32,7 +33,7 @@ public:
 	USkeletalMeshComponent* SkeletalMesh;
 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	UInterpToMovementComponent* MovementComponent;
+	UBasicMovementComponent* MovementComponent;
 
 protected:
 	// Called when the game starts or when spawned

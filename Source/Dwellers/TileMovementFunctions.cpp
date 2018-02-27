@@ -5,8 +5,6 @@
 #include "TileObject.h"
 #include "Async/TaskGraphInterfaces.h"
 
-float D = .0001f;
-
 TTile* GetTileAtLocation(FVector loc, int cellsize, TTile*** tiles, int mapsize)
 {
 	int x = ((int)loc.X) / cellsize;
@@ -45,12 +43,15 @@ bool AreVectorsInAStraightLine(FVector2D* v1, int v1height, FVector2D* v2, int v
 		return false;
 }
 
-float GetHeuristic(TTile* current, TTile* target)
+float GetHeuristic(float D, TTile* current, TTile* target, bool cardinals)
 {
-	float a = FMath::Abs(current->location->x - target->location->x) / GameEncapsulator::GetGame()->map->cellsize;
-	float b = FMath::Abs(current->location->y - target->location->y) / GameEncapsulator::GetGame()->map->cellsize;
+	float a = FMath::Abs(current->location->x - target->location->x);
+	float b = FMath::Abs(current->location->y - target->location->y);
 
-	return D * (a + b);
+	if (cardinals)
+		return D * (a + b);
+	else
+		return D * (a + b) - D * FMath::Min(a, b);
 }
 
 TTile* GetTile(int x, int y, TTile*** map, int mapsize)
@@ -114,8 +115,8 @@ TArray<FVector> UTileMovementFunctions::GetTilePathFromPoints(FVector start, FVe
 
 	WorldMap* map = GameEncapsulator::GetGame()->map;
 
-	TTile* st = GetTileAtLocation(start, map->cellsize, map->tiles, map->mapsize);
-	TTile* ed = GetTileAtLocation(end, map->cellsize, map->tiles, map->mapsize);
+	TTile* st = map->GetTileAtLocation(start + GameEncapsulator::GetGame()->map->cellsize / 2);
+	TTile* ed = map->GetTileAtLocation(end + GameEncapsulator::GetGame()->map->cellsize / 2);
 
 	if (st == nullptr || ed == nullptr)
 		return locations;
@@ -184,9 +185,9 @@ TArray<TTile*> UTileMovementFunctions::GetTilePath_NoWeight(TTile* start, TTile*
 	return path;
 }
 
-void UTileMovementFunctions::AsyncMoveActorTo(AEntity* target, FVector end)
+void UTileMovementFunctions::AsyncMoveActorTo(AEntity* target, FVector end, bool cardinals)
 {
-	FAutoDeleteAsyncTask<FFindPathTask>* task = new FAutoDeleteAsyncTask<FFindPathTask>(target, end);
+	FAutoDeleteAsyncTask<FFindPathTask>* task = new FAutoDeleteAsyncTask<FFindPathTask>(target, end, cardinals);
 	task->StartBackgroundTask();
 }
 
@@ -222,7 +223,7 @@ void UTileMovementFunctions::GetTilePath(TArray<TTile*>* path, TTile*** tiles, i
 			if (costsofar.Find(next) == nullptr || newcost < costsofar[next])
 			{
 				costsofar.Add(next, newcost);
-				float priority = newcost + GetHeuristic(next, end);
+				float priority = GetHeuristic(next->GetCost(), next, end, cardinals);
 				frontier.AddNode(new PriorityNode(next, priority));
 				camefrom.Add(next, current);
 			}
@@ -242,6 +243,8 @@ void UTileMovementFunctions::GetTilePath(TArray<TTile*>* path, TTile*** tiles, i
 		else
 			n = *a;
 	}
+
+	path->Add(start);
 
 	Algo::Reverse(*path);
 }
@@ -278,7 +281,7 @@ void UTileMovementFunctions::GetTilePath_NoWeight(TArray<TTile*>* path, TTile***
 			if (costsofar.Find(next) == nullptr || newcost < costsofar[next])
 			{
 				costsofar.Add(next, newcost);
-				float priority = newcost + GetHeuristic(next, end);
+				float priority = newcost + GetHeuristic(next->GetCost(), next, end, cardinals);
 				frontier.AddNode(new PriorityNode(next, priority));
 				camefrom.Add(next, current);
 			}

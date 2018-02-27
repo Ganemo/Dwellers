@@ -1,6 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "WorldMap.h"
+#include "WorldChunk.h"
+#include "Tiles.h"
 #include "TileObject.h"
 
 WorldMap::WorldMap()
@@ -59,8 +61,16 @@ int WorldMap::GetPointFromReference(int xpos, int ypos, int xdiff, int ydiff)
 
 void WorldMap::MakeTileRoad(TTile* tile)
 {
+	if (tile == nullptr)
+		return;
+
 	if (tile->type != ETileType::Ground)
 		return;
+
+	if (tile->object != nullptr && tile->object->GetName().Equals("Road"))
+		return;
+
+	PathHandler.AddTile(tile);
 
 	AWorldChunk* chnk = FindChunkWithTile(tile);
 

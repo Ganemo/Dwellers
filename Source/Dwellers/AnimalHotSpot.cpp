@@ -69,7 +69,7 @@ void AAnimalHotSpot::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	UTileMovementFunctions::AsyncMoveActorTo(OwningAnimals[animaltotick], this->GetActorLocation() + GameEncapsulator::GetGame()->map->cellsize * FVector(FMath::RandRange(-5, 5), FMath::RandRange(-5, 5), 0));
+	//UTileMovementFunctions::AsyncMoveActorTo(OwningAnimals[animaltotick], this->GetActorLocation() + GameEncapsulator::GetGame()->map->cellsize * FVector(FMath::RandRange(-5, 5), FMath::RandRange(-5, 5), 0));
 	//this->SetActorTickInterval(FMath::RandRange(10, 20));
 
 	animaltotick++;

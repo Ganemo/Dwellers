@@ -100,7 +100,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = TileMovement)
 	static TArray<FVector> GetTilePathFromPoints(FVector start, FVector end, bool cardinals);
 	UFUNCTION(BlueprintCallable, Category = TileMovement)
-	static void AsyncMoveActorTo(AEntity* target, FVector end);
+	static void AsyncMoveActorTo(AEntity* target, FVector end, bool cardinals);
 
 	static TArray<TTile*> GetTilePath(TTile* start, TTile* end, bool cardinals);
 	static TArray<TTile*> GetTilePath_NoWeight(TTile* start, TTile* end, bool cardinals);
@@ -115,16 +115,17 @@ class FFindPathTask : public FNonAbandonableTask
 	friend class FAutoDeleteAsyncTask<FFindPathTask>;
 
 public:
-	FFindPathTask(AEntity* actor, FVector end)
+	FFindPathTask(AEntity* actor, FVector end, bool cardinals)
 	{
 		this->actor = actor;
 		this->end = end;
+		this->cardinals = cardinals;
 	}
 
 protected:
 	AEntity* actor;
 	FVector end;
-
+	bool cardinals;
 
 	void DoWork()
 	{
@@ -135,30 +136,40 @@ protected:
 
 		double time = FPlatformTime::Seconds();
 
-		UTileMovementFunctions::GetTilePath(&path, GameEncapsulator::GetGame()->map->tiles, GameEncapsulator::GetGame()->map->mapsize, st, ed, false);
-
-		//UE_LOG(LogTemp, Log, TEXT("Path Gen Time: %f"), FPlatformTime::Seconds() - time);
-
-		if (actor != nullptr && path.Num() > 0)
+		if (GameEncapsulator::GetGame()->map->PathHandler.TilesPartOfSamePath(st, ed))
 		{
-			actor->MovementComponent->ResetControlPoints();
-			actor->MovementComponent->AddControlPointPosition(actor->GetActorLocation(), false);
+			path = GameEncapsulator::GetGame()->map->PathHandler.GetPath(st, ed);
 
-			float totalcost = 0;
-			for (int x = 0; x < path.Num(); x++)
+			actor->MovementComponent->AddPoints(path);
+			actor->MovementComponent->DestroyOnEnd(true);
+		}
+		else
+		{
+			UTileMovementFunctions::GetTilePath(&path, GameEncapsulator::GetGame()->map->tiles, GameEncapsulator::GetGame()->map->mapsize, st, ed, cardinals);
+
+			if (actor != nullptr && path.Num() > 0)
 			{
-				totalcost += path[x]->GetCost();
-				actor->MovementComponent->AddControlPointPosition(
-					FVector(
-						path[x]->location->x * GameEncapsulator::GetGame()->map->cellsize,
-						path[x]->location->y * GameEncapsulator::GetGame()->map->cellsize,
-						path[x]->height * (GameEncapsulator::GetGame()->map->cellsize * GameEncapsulator::GetGame()->map->cliffheight)),
-					false);
-			}
+				/*actor->MovementComponent->ResetControlPoints();
+				actor->MovementComponent->AddControlPointPosition(actor->GetActorLocation(), false);
 
-			actor->MovementComponent->Duration = FMath::RandRange(.75f, 1.25f) * (totalcost / path.Num()) * 25;
-			actor->MovementComponent->FinaliseControlPoints();
-			actor->MovementComponent->RestartMovement(1);
+				float totalcost = 0;
+				for (int x = 0; x < path.Num(); x++)
+				{
+					totalcost += path[x]->GetCost();
+					actor->MovementComponent->AddControlPointPosition(
+						FVector(
+							path[x]->location->x * GameEncapsulator::GetGame()->map->cellsize,
+							path[x]->location->y * GameEncapsulator::GetGame()->map->cellsize,
+							path[x]->height * (GameEncapsulator::GetGame()->map->cellsize * GameEncapsulator::GetGame()->map->cliffheight)),
+						false);
+				}
+
+				actor->MovementComponent->Duration = FMath::RandRange(.75f, 1.25f) * (totalcost / path.Num()) * 25;
+				actor->MovementComponent->FinaliseControlPoints();
+				actor->MovementComponent->RestartMovement(1);*/
+
+				actor->MovementComponent->AddPoints(path);
+			}
 		}
 	}
 
