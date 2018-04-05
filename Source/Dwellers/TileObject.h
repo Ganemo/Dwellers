@@ -14,9 +14,10 @@ class TTile;
 class AWorldChunk;
 
 
-/**
- * 
- */
+/// <summary>
+/// An object that a tile can have on it
+/// Affects tile traversal
+/// </summary>
 class DWELLERS_API FTileObject
 {
 public:
@@ -28,13 +29,24 @@ public:
 	virtual FString FTileObject::GetDescription() { return "Default Description"; }
 	virtual float FTileObject::GetTraversalCost() { return 1; }
 
-	virtual void FTileObject::AffectTile(TTile* owningtile, AWorldChunk* chunk);
-	virtual void FTileObject::Destroy(TTile* owningtile, AWorldChunk* chunk) {};
+	/// <summary>
+	/// Affect the tile that this object is on
+	/// </summary>
+	/// <param Name="Node">The tile</param>
+	/// <param Name="Node">The chunk (used for instances)</param>
+	virtual void FTileObject::AffectTile(TTile* OwningTile, AWorldChunk* Chunk);
+
+	/// <summary>
+	/// Destroy this tile object and remove it's affects
+	/// </summary>
+	/// <param Name="Node">The tile</param>
+	/// <param Name="Node">The chunk (used for instances)</param>
+	virtual void FTileObject::Destroy(TTile* OwningTile, AWorldChunk* Chunk) {};
 };
 
 class DWELLERS_API FTileObject_Grass : public FTileObject
 {
-	TArray<int> instances;
+	TArray<int> Instances;
 public:
 	FTileObject_Grass::~FTileObject_Grass() override {};
 
@@ -42,8 +54,8 @@ public:
 	FString FTileObject_Grass::GetDescription() override { return "Simple Grass"; }
 	float FTileObject_Grass::GetTraversalCost() override { return 1; }
 
-	void FTileObject_Grass::AffectTile(TTile* owningtile, AWorldChunk* chunk) override;
-	void FTileObject_Grass::Destroy(TTile* owningtile, AWorldChunk* chunk) override;
+	void FTileObject_Grass::AffectTile(TTile* OwningTile, AWorldChunk* Chunk) override;
+	void FTileObject_Grass::Destroy(TTile* OwningTile, AWorldChunk* Chunk) override;
 };
 
 class DWELLERS_API FTileObject_CatTail : public FTileObject
@@ -56,12 +68,12 @@ public:
 	FString FTileObject_CatTail::GetDescription() override { return "Simple Grass"; }
 	float FTileObject_CatTail::GetTraversalCost() override { return 1; }
 
-	void FTileObject_CatTail::AffectTile(TTile* owningtile, AWorldChunk* chunk) override;
+	void FTileObject_CatTail::AffectTile(TTile* OwningTile, AWorldChunk* Chunk) override;
 };
 
 class DWELLERS_API FTileObject_Tree : public FTileObject
 {
-	TArray<int> instances;
+	TArray<int> Instances;
 public:
 	FTileObject_Tree::~FTileObject_Tree() override {};
 
@@ -69,18 +81,18 @@ public:
 	virtual FString FTileObject_Tree::GetDescription() override { return "Default Description"; }
 	float FTileObject_Tree::GetTraversalCost() override { return -1; }
 
-	void FTileObject_Tree::AffectTile(TTile* owningtile, AWorldChunk* chunk) override;
+	void FTileObject_Tree::AffectTile(TTile* OwningTile, AWorldChunk* Chunk) override;
 };
 
 class DWELLERS_API FTileObject_Stone : public FTileObject
 {
-	TArray<int> instances;
+	TArray<int> Instances;
 public:
 	FString FTileObject_Stone::GetName() override { return "Rock"; }
 	FString FTileObject_Stone::GetDescription() override { return "Default Description"; }
 	float FTileObject_Stone::GetTraversalCost() override { return -1; }
 
-	void FTileObject_Stone::AffectTile(TTile* owningtile, AWorldChunk* chunk) override;
+	void FTileObject_Stone::AffectTile(TTile* OwningTile, AWorldChunk* Chunk) override;
 };
 class DWELLERS_API FTileObject_AnimalHotspot : public FTileObject
 {
@@ -90,7 +102,7 @@ public:
 	FString FTileObject_AnimalHotspot::GetDescription() override { return "Default Description"; }
 	float FTileObject_AnimalHotspot::GetTraversalCost() override { return 1; }
 
-	void FTileObject_AnimalHotspot::AffectTile(TTile* owningtile, AWorldChunk* chunk) override;
+	void FTileObject_AnimalHotspot::AffectTile(TTile* OwningTile, AWorldChunk* Chunk) override;
 };
 
 class DWELLERS_API FTileObject_Road : public FTileObject
@@ -100,6 +112,6 @@ public:
 	FString FTileObject_Road::GetDescription() override { return "Default Description"; }
 	float FTileObject_Road::GetTraversalCost() override { return .5; }
 
-	void FTileObject_Road::AffectTile(TTile* owningtile, AWorldChunk* chunk) override;
-	void FTileObject_Road::Destroy(TTile* owningtile, AWorldChunk* chunk) override;
+	void FTileObject_Road::AffectTile(TTile* OwningTile, AWorldChunk* Chunk) override;
+	void FTileObject_Road::Destroy(TTile* OwningTile, AWorldChunk* Chunk) override;
 };

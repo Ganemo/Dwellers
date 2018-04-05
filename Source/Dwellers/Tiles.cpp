@@ -6,16 +6,22 @@
 
 FVector TTile::GetTileLocationAsVector()
 {
-	return FVector(GameEncapsulator::GetGame()->map->cellsize * location->x, GameEncapsulator::GetGame()->map->cellsize * location->y, GameEncapsulator::GetGame()->map->cellsize * GameEncapsulator::GetGame()->map->cliffheight * height);
+	return FVector(
+		GameEncapsulator::GetGame()->Map->CellSize * location->x,
+		GameEncapsulator::GetGame()->Map->CellSize * location->y,
+		GameEncapsulator::GetGame()->Map->CellSize * GameEncapsulator::GetGame()->Map->CliffHeight * Height
+	);
 }
 
 void TTile::RemoveObject()
 {
+	//Remove an object if there is on
+	//Call it's destroy method
 	if (object != nullptr)
 	{
 		FTileObject* tmp = object;
 		object = nullptr;
-		tmp->Destroy(this, GameEncapsulator::GetGame()->map->FindChunkWithTile(this));
+		tmp->Destroy(this, GameEncapsulator::GetGame()->Map->FindChunkWithTile(this));
 		delete tmp;
 	}
 

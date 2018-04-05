@@ -3,10 +3,8 @@
 #include "WorldChunk.h"
 
 
-// Sets default values
 AWorldChunk::AWorldChunk()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
 	RootComponent = CreateDefaultSubobject<USceneComponent>("Root");
@@ -17,84 +15,86 @@ AWorldChunk::AWorldChunk()
 	Water = CreateDefaultSubobject<UInstancedStaticMeshComponent>("Water");
 }
 	
-// Called when the game starts or when spawned
 void AWorldChunk::BeginPlay()
 {
 	Super::BeginPlay();
 
+	//Make sure traces on the landscape respond with a block
 	Landscape->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Block);
 }
 
-// Called every frame
 void AWorldChunk::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
-void AWorldChunk::CreateMeshSection(int pos)
+void AWorldChunk::CreateMeshSection(int Pos)
 {
-	Landscape->CreateMeshSection(pos, Positions, Triangles, Normal, UV, Colors, Tangents, true, EUpdateFrequency::Infrequent);
+	Landscape->CreateMeshSection(Pos, Positions, Triangles, Normal, UV, Colors, Tangents, true, EUpdateFrequency::Infrequent);
 }
 
-void AWorldChunk::UpdateMesh(int pos)
+void AWorldChunk::UpdateMesh(int Pos)
 {
-	Landscape->UpdateMeshSection(pos, Positions, Triangles, Normal, UV, Colors, Tangents, ESectionUpdateFlags::None);
+	Landscape->UpdateMeshSection(Pos, Positions, Triangles, Normal, UV, Colors, Tangents, ESectionUpdateFlags::None);
 }
 
-
-bool AWorldChunk::ContainsMeshesFor(FString name)
+bool AWorldChunk::ContainsMeshesFor(FString Name)
 {
-	return InstancedMeshes.Contains(name);
+	return InstancedMeshes.Contains(Name);
 }
 
-UHierarchicalInstancedStaticMeshComponent* AWorldChunk::CreateMeshesFor(FString name)
+UHierarchicalInstancedStaticMeshComponent* AWorldChunk::CreateMeshesFor(FString Name)
 {
-	if (ContainsMeshesFor(name))
+	//Return the component instance if it already exists
+	if (ContainsMeshesFor(Name))
 	{
-		return *InstancedMeshes.Find(name);
+		return *InstancedMeshes.Find(Name);
 	}
 
-	UHierarchicalInstancedStaticMeshComponent* cmpt = NewObject<UHierarchicalInstancedStaticMeshComponent>(this, UHierarchicalInstancedStaticMeshComponent::StaticClass(), *name);
-	cmpt->RegisterComponent();
+	//Create and register the component
+	UHierarchicalInstancedStaticMeshComponent* Cmpt = NewObject<UHierarchicalInstancedStaticMeshComponent>(this, UHierarchicalInstancedStaticMeshComponent::StaticClass(), *Name);
+	Cmpt->RegisterComponent();
 
-	InstancedMeshes.Add(name, cmpt);
+	//Add the component to the map of instanced mesh components
+	InstancedMeshes.Add(Name, Cmpt);
 
-	return cmpt;
+	return Cmpt;
 }
 
-UHierarchicalInstancedStaticMeshComponent* AWorldChunk::GetMeshesFor(FString name)
+UHierarchicalInstancedStaticMeshComponent* AWorldChunk::GetMeshesFor(FString Name)
 {
-	if (ContainsMeshesFor(name))
+	//Get component if it exists
+	//Return nullptr otherwise
+	if (ContainsMeshesFor(Name))
 	{
-		return *InstancedMeshes.Find(name);
+		return *InstancedMeshes.Find(Name);
 	}
 	else
 		return nullptr;
 }
 
-int AWorldChunk::AddMesh(FString name, FTransform position)
+int AWorldChunk::AddMesh(FString Name, FTransform Position)
 {
-	if (ContainsMeshesFor(name))
+	//Add an instance if the component exists
+	//Return -1 if the component doesn't exist
+	if (ContainsMeshesFor(Name))
 	{
-		UHierarchicalInstancedStaticMeshComponent* cmpt = *InstancedMeshes.Find(name);
-		return cmpt->AddInstance(position);
+		UHierarchicalInstancedStaticMeshComponent* Cmpt = *InstancedMeshes.Find(Name);
+		return Cmpt->AddInstance(Position);
 	}
 	else
-	{
 		return -1;
-	}
 }
 
-bool AWorldChunk::RemoveMesh(FString name, int pos)
+bool AWorldChunk::RemoveMesh(FString Name, int Index)
 {
-	if (ContainsMeshesFor(name))
+	//Remove the instance at the index
+	//Return false if the index is invalid or the component doesn't exist
+	if (ContainsMeshesFor(Name))
 	{
-		UHierarchicalInstancedStaticMeshComponent* cmpt = *InstancedMeshes.Find(name);
-		return cmpt->RemoveInstance(pos);
+		UHierarchicalInstancedStaticMeshComponent* Cmpt = *InstancedMeshes.Find(Name);
+		return Cmpt->RemoveInstance(Index);
 	}
 	else
-	{
 		return false;
-	}
 }

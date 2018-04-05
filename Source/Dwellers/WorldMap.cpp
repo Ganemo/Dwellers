@@ -11,110 +11,116 @@ WorldMap::WorldMap()
 
 WorldMap::~WorldMap()
 {
-	for (int x = 0; x < mapsize; x++)
+	for (int x = 0; x < MapSize; x++)
 	{
-		delete[] tiles[x];
+		delete[] Tiles[x];
 	}
-	delete[] tiles;
+	delete[] Tiles;
 }
 
 TTile* WorldMap::GetTile(int x, int y)
 {
-	if (x >= mapsize || y >= mapsize || x < 0 || y < 0)
+	if (x >= MapSize || y >= MapSize || x < 0 || y < 0)
 		return nullptr;
 
-	TTile* tilelookup = tiles[x][y];
-	return tilelookup;
+	return Tiles[x][y];
 }
 
-TTile* WorldMap::GetTileAtLocation(FVector loc)
+TTile* WorldMap::GetTileAtLocation(FVector Loc)
 {
-	int x = (FMath::RoundToInt(loc.X)) / cellsize;
-	int y = (FMath::RoundToInt(loc.Y)) / cellsize;
+	int x = (FMath::RoundToInt(Loc.X)) / CellSize;
+	int y = (FMath::RoundToInt(Loc.Y)) / CellSize;
 
-	if (x < 0 || x >= mapsize || y < 0 || y >= mapsize)
+	if (x < 0 || x >= MapSize || y < 0 || y >= MapSize)
 		return nullptr;
 
-	return tiles[x][y];
+	return Tiles[x][y];
 }
 
-bool WorldMap::IsTileInChunk(TTile* tile)
+bool WorldMap::IsTileInChunk(TTile* Tile)
 {
-	int num = heightchunks.Num();
-	for (int x = 0; x < num; x++)
+	int HeightChunkNum = HeightChunks.Num();
+	for (int x = 0; x < HeightChunkNum; x++)
 	{
-		if (heightchunks[x].Contains(tile))
+		if (HeightChunks[x].Contains(Tile))
 			return true;
 	}
 	return false;
 }
 
-AWorldChunk* WorldMap::FindChunkWithTile(TTile* tile)
+AWorldChunk* WorldMap::FindChunkWithTile(TTile* Tile)
 {
-	return chunks[(tile->location->x / chunksize) * (mapsize / chunksize) + (tile->location->y / chunksize)];
+	return Chunks[(Tile->location->x / ChunkSize) * (MapSize / ChunkSize) + (Tile->location->y / ChunkSize)];
 }
 
-int WorldMap::GetPointFromReference(int xpos, int ypos, int xdiff, int ydiff)
+void WorldMap::MakeTileRoad(TTile* CurrentTile)
 {
-	return ((chunksize * 2 + 2) + ((chunksize * 2 + 1) * xpos * 2) + (2 * ypos)) + xdiff * (chunksize * 2 + 1) + ydiff;
-}
-
-void WorldMap::MakeTileRoad(TTile* tile)
-{
-	if (tile == nullptr)
+	//Make sure tile is valid
+	if (CurrentTile == nullptr)
 		return;
 
-	if (tile->type != ETileType::Ground)
+	//Make sure the tile is a ground tile
+	if (CurrentTile->TileType != ETileType::Ground)
 		return;
 
-	if (tile->object != nullptr && tile->object->GetName().Equals("Road"))
+	//Make sure the tile object isn't already a road object
+	if (CurrentTile->object != nullptr && CurrentTile->object->GetName().Equals("Road"))
 		return;
 
-	PathHandler.AddTile(tile);
+	//Add this tile to the path
+	PathHandler.AddTile(CurrentTile);
 
-	AWorldChunk* chnk = FindChunkWithTile(tile);
+	//Find the chunk in the tile
+	AWorldChunk* Chunk = FindChunkWithTile(CurrentTile);
 
-	tile->RemoveObject();
+	//Remove the current object if it exists
+	CurrentTile->RemoveObject();
 
-	tile->object = new FTileObject_Road();
-	tile->object->AffectTile(tile, chnk);
+	//Create a road object and make it affect this tile
+	CurrentTile->object = new FTileObject_Road();
+	CurrentTile->object->AffectTile(CurrentTile, Chunk);
 
+	TTile* Tile;
 
-	TTile* ti;
-	ti = GetTile(tile->location->x + 1, tile->location->y);
-	if (ti != nullptr && ti->object != nullptr)
+	////Reaffect the adjacent tiles if it has a road object////
+	 
+	//Get the right tile
+	Tile = GetTile(CurrentTile->location->x + 1, CurrentTile->location->y);
+	if (Tile != nullptr && Tile->object != nullptr)
 	{
-		if (ti->object->GetName().Equals("Road"))
+		if (Tile->object->GetName().Equals("Road"))
 		{
-			ti->object->AffectTile(ti, FindChunkWithTile(ti));
+			Tile->object->AffectTile(Tile, FindChunkWithTile(Tile));
 		}
 	}
 
-	ti = GetTile(tile->location->x - 1, tile->location->y);
-	if (ti != nullptr && ti->object != nullptr)
+	//Get the left tile
+	Tile = GetTile(CurrentTile->location->x - 1, CurrentTile->location->y);
+	if (Tile != nullptr && Tile->object != nullptr)
 	{
-		if (ti->object->GetName().Equals("Road"))
+		if (Tile->object->GetName().Equals("Road"))
 		{
-			ti->object->AffectTile(ti, FindChunkWithTile(ti));
+			Tile->object->AffectTile(Tile, FindChunkWithTile(Tile));
 		}
 	}
 
-	ti = GetTile(tile->location->x, tile->location->y + 1);
-	if (ti != nullptr && ti->object != nullptr)
+	//Get the north tile
+	Tile = GetTile(CurrentTile->location->x, CurrentTile->location->y + 1);
+	if (Tile != nullptr && Tile->object != nullptr)
 	{
-		if (ti->object->GetName().Equals("Road"))
+		if (Tile->object->GetName().Equals("Road"))
 		{
-			ti->object->AffectTile(ti, FindChunkWithTile(ti));
+			Tile->object->AffectTile(Tile, FindChunkWithTile(Tile));
 		}
 	}
 
-	ti = GetTile(tile->location->x, tile->location->y - 1);
-	if (ti != nullptr && ti->object != nullptr)
+	//Get the south tile
+	Tile = GetTile(CurrentTile->location->x, CurrentTile->location->y - 1);
+	if (Tile != nullptr && Tile->object != nullptr)
 	{
-		if (ti->object->GetName().Equals("Road"))
+		if (Tile->object->GetName().Equals("Road"))
 		{
-			ti->object->AffectTile(ti, FindChunkWithTile(ti));
+			Tile->object->AffectTile(Tile, FindChunkWithTile(Tile));
 		}
 	}
-
 }

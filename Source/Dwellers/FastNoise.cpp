@@ -194,11 +194,11 @@ static FN_DECIMAL CubicLerp(FN_DECIMAL a, FN_DECIMAL b, FN_DECIMAL c, FN_DECIMAL
 	return t * t * t * p + t * t * ((a - b) - p) + t * (c - a) + b;
 }
 
-void FastNoise::SetSeed(int seed)
+void FastNoise::SetSeed(int Seed)
 {
-	m_seed = seed;
+	m_seed = Seed;
 
-	std::mt19937 gen(seed);
+	std::mt19937 gen(Seed);
 
 	for (int i = 0; i < 256; i++)
 		m_perm[i] = i;
@@ -272,26 +272,26 @@ unsigned char FastNoise::Index4D_256(unsigned char offset, int x, int y, int z, 
 #define Z_PRIME 6971
 #define W_PRIME 1013
 
-static FN_DECIMAL ValCoord2D(int seed, int x, int y)
+static FN_DECIMAL ValCoord2D(int Seed, int x, int y)
 {
-	int n = seed;
+	int n = Seed;
 	n ^= X_PRIME * x;
 	n ^= Y_PRIME * y;
 
 	return (n * n * n * 60493) / FN_DECIMAL(2147483648);
 }
-static FN_DECIMAL ValCoord3D(int seed, int x, int y, int z)
+static FN_DECIMAL ValCoord3D(int Seed, int x, int y, int z)
 {
-	int n = seed;
+	int n = Seed;
 	n ^= X_PRIME * x;
 	n ^= Y_PRIME * y;
 	n ^= Z_PRIME * z;
 
 	return (n * n * n * 60493) / FN_DECIMAL(2147483648);
 }
-static FN_DECIMAL ValCoord4D(int seed, int x, int y, int z, int w)
+static FN_DECIMAL ValCoord4D(int Seed, int x, int y, int z, int w)
 {
-	int n = seed;
+	int n = Seed;
 	n ^= X_PRIME * x;
 	n ^= Y_PRIME * y;
 	n ^= Z_PRIME * z;

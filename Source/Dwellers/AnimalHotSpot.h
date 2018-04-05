@@ -7,27 +7,23 @@
 #include "Entity.h"
 #include "AnimalHotSpot.generated.h"
 
+/// <summary>
+/// A spawnable Actor which spawns animals.
+/// </summary>
 UCLASS()
 class DWELLERS_API AAnimalHotSpot : public AActor
 {
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
 	AAnimalHotSpot();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 public:	
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	UBlueprint* bp;
-	
-	int animaltotick = 0;
+	UBlueprint* BP;
 	TArray<AEntity*> OwningAnimals;
-
-	FCollisionQueryParams RV_TraceParams;
 };

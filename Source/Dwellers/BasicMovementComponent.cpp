@@ -4,75 +4,79 @@
 #include "Entity.h"
 #include "Dwellers.h"
 
-UBasicMovementComponent::UBasicMovementComponent(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer)
+UBasicMovementComponent::UBasicMovementComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
+	//Need to update the movement always
 	bUpdateOnlyIfRendered = false;
-
 	bWantsInitializeComponent = true;
-
+	//Should the Actor be destroyed when it reaches the End of the Path
 	bDestroyOnEnd = false;
 }
 
 void UBasicMovementComponent::BeginPlay()
 {
-	UE_LOG(LogMyGame, Warning, TEXT("Movement For %s Added"), *this->GetName());
-
+	OwningActor = Cast<AEntity>(GetOwner());
 }
 
 void UBasicMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
 {
-	AEntity* act = Cast<AEntity>(GetOwner());
-
-	if (act == nullptr)
+	if (OwningActor == nullptr)
 		return;
 
-	if (points.Num() > 0)
+	//If there are still points to follow
+	if (Points.Num() > 0)
 	{
-		if (act->GetActorLocation().Equals(points[0]->location))
-			points.RemoveAt(0);
+		//Remove a point if the Actor is at its location
+		if (OwningActor->GetActorLocation().Equals(Points[0]->location))
+			Points.RemoveAt(0);
 
-		if (points.Num() > 0)
+		//Follow the next point
+		if (Points.Num() > 0)
 		{
-			FVector vec = points[0]->location - act->GetActorLocation();
-			vec.Normalize();
+			//Get the direction toward the next point
+			FVector NewVel = Points[0]->location - OwningActor->GetActorLocation();
+			NewVel.Normalize();
 
-			float dist = FVector::Dist(points[0]->location, act->GetActorLocation());
-			float spd = act->Speed + (1 - points[0]->speed)*act->Speed;
+			//Get the distance to the next point
+			float DistanceToNextPoint = FVector::Dist(Points[0]->location, OwningActor->GetActorLocation());
+			//Get the speed of the Actor over the tile
+			float Speed = OwningActor->Speed + (1 - Points[0]->speed)*OwningActor->Speed;
 
-			if (dist < spd)
-			{
-				vec *= dist;
-			}
+			//If the distance to the next point is less than the distance to move with speed
+			//Move the remaining distance to the location.
+			if (DistanceToNextPoint < Speed)
+				NewVel *= DistanceToNextPoint;
 			else
-			{
-				vec *= spd;
-			}
+				NewVel *= Speed;
 
-			this->Velocity = vec;
+			//Set the velocity and update it 
+			this->Velocity = NewVel;
 			this->UpdateComponentVelocity();
 
-			act->AddActorLocalOffset(vec);
+			//Move the Actor
+			OwningActor->AddActorLocalOffset(NewVel);
 		}
 	}
+	//Destroy owner if End Path is reached and it should be destroyed
 	else if (bDestroyOnEnd)
 	{
-		act->Destroy();
+		OwningActor->Destroy();
 	}
 }
 
-void UBasicMovementComponent::AddPoints(TArray<TTile*> tiles)
+void UBasicMovementComponent::AddPoints(TArray<TTile*> Tiles)
 {
-
 	UE_LOG(LogMyGame, Warning, TEXT("Adding Points For %s"), *this->GetName());
 
-	points.Empty();
+	//Clear all previous Path points
+	Points.Empty();
 
-	for (int x = 0; x < tiles.Num(); ++x)
-		points.Add(new FMovementPoint(tiles[x]->GetTileLocationAsVector(), tiles[x]->GetCost()));
+	//Get tile locations and costs and stor them as FMovementPoints into the Path
+	for (int x = 0; x < Tiles.Num(); ++x)
+		Points.Add(new FMovementPoint(Tiles[x]->GetTileLocationAsVector(), Tiles[x]->GetCost()));
 }
 
-void UBasicMovementComponent::DestroyOnEnd(bool set)
+void UBasicMovementComponent::DestroyOnEnd(bool Set)
 {
-	bDestroyOnEnd = set;
+	bDestroyOnEnd = Set;
 }

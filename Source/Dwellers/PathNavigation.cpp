@@ -3,209 +3,259 @@
 #include "Tiles.h"
 #include "GameEncapsulator.h"
 
-FPathObject::FPathObject(TTile* cur)
+FPathObject::FPathObject(TTile* CurrentTile)
 {
-	current = cur;
+	Current = CurrentTile;
 }
 
-bool FPathObject::CouldBeNeighbor(TTile* othr)
+bool FPathObject::CouldBeNeighbor(TTile* Other)
 {
-	return FMath::Abs(othr->location->x - current->location->x) + FMath::Abs(othr->location->y - current->location->y) == 1;
+	//If the difference between the x and y locations of the tiles are not 1,
+	//it cannot be a neighbor as the y location or the x location exclusively must be 1.
+	return FMath::Abs(Other->location->x - Current->location->x) + FMath::Abs(Other->location->y - Current->location->y) == 1;
 }
 
 
-void FPathTree::CombinePaths(FPathTree* tree)
+void FPathTree::CombinePaths(FPathTree* Tree)
 {
-	for (TPair<TTile*, FPathObject*> elm : tree->ContainingTiles)
+	//Add all tiles from other tree
+	for (TPair<TTile*, FPathObject*> Element : Tree->ContainingTiles)
 	{
-		AddTile(elm.Key);
+		AddTile(Element.Key);
 	}
 }
 
-bool FPathTree::ContainsTile(TTile* tile)
+bool FPathTree::ContainsTile(TTile* Tile)
 {
-	return ContainingTiles.Contains(tile);
+	//Check if tile in this Path
+	return ContainingTiles.Contains(Tile);
 }
 
-FPathObject* FPathTree::GetPathObject(TTile* tile)
+FPathObject* FPathTree::GetPathObject(TTile* Tile)
 {
-	return *ContainingTiles.Find(tile);
+	//Get the Path ovbject for the tile
+	FPathObject** Obj = ContainingTiles.Find(Tile);
+	if (Obj != nullptr)
+		return *Obj;
+	else
+		return nullptr;
 }
 
-bool FPathTree::CouldBePartOfPath(TTile* tile)
+bool FPathTree::CouldBePartOfPath(TTile* Tile)
 {
-	for (TPair<TTile*, FPathObject*> elm : ContainingTiles)
+	//check if the tile could be a neighbor to any of the tiles in this Path
+	for (TPair<TTile*, FPathObject*> Elm : ContainingTiles)
 	{
-		if (elm.Value->CouldBeNeighbor(tile))
+		if (Elm.Value->CouldBeNeighbor(Tile))
 			return true;
 	}
 
 	return false;
 }
 
-void FPathTree::AddTile(TTile* tile)
+void FPathTree::AddTile(TTile* Tile)
 {
-	FPathObject* obj = new FPathObject(tile);
+	//Create a Path object for the tile
+	FPathObject* Obj = new FPathObject(Tile);
 
-	ContainingTiles.Add(tile, obj);
+	//Add the tile to the storage map
+	ContainingTiles.Add(Tile, Obj);
 
-	TTile* til = GameEncapsulator::GetGame()->map->GetTile(tile->location->x + 1, tile->location->y);
-	if (ContainsTile(til))
+	//Check the tile to the right of this tile
+	TTile* Til = GameEncapsulator::GetGame()->Map->GetTile(Tile->location->x + 1, Tile->location->y);
+	if (ContainsTile(Til))
 	{
-		FPathObject* nxt = *ContainingTiles.Find(til);
-		obj->neighbors[2] = nxt;
-		nxt->neighbors[0] = obj;
+		FPathObject* nxt = *ContainingTiles.Find(Til);
+		Obj->Neighbors[2] = nxt;
+		nxt->Neighbors[0] = Obj;
 	}
 
-	til = GameEncapsulator::GetGame()->map->GetTile(tile->location->x - 1, tile->location->y);
-	if (ContainsTile(til))
+	//Check the tile to the left of this tile
+	Til = GameEncapsulator::GetGame()->Map->GetTile(Tile->location->x - 1, Tile->location->y);
+	if (ContainsTile(Til))
 	{
-		FPathObject* nxt = *ContainingTiles.Find(til);
-		obj->neighbors[0] = nxt;
-		nxt->neighbors[2] = obj;
+		FPathObject* nxt = *ContainingTiles.Find(Til);
+		Obj->Neighbors[0] = nxt;
+		nxt->Neighbors[2] = Obj;
 	}
 
-	til = GameEncapsulator::GetGame()->map->GetTile(tile->location->x, tile->location->y + 1);
-	if (ContainsTile(til))
+	//Check the tile to the above this tile
+	Til = GameEncapsulator::GetGame()->Map->GetTile(Tile->location->x, Tile->location->y + 1);
+	if (ContainsTile(Til))
 	{
-		FPathObject* nxt = *ContainingTiles.Find(til);
-		obj->neighbors[1] = nxt;
-		nxt->neighbors[3] = obj;
+		FPathObject* nxt = *ContainingTiles.Find(Til);
+		Obj->Neighbors[1] = nxt;
+		nxt->Neighbors[3] = Obj;
 	}
 
-	til = GameEncapsulator::GetGame()->map->GetTile(tile->location->x, tile->location->y - 1);
-	if (ContainsTile(til))
+	//Check the tile to the below this tile
+	Til = GameEncapsulator::GetGame()->Map->GetTile(Tile->location->x, Tile->location->y - 1);
+	if (ContainsTile(Til))
 	{
-		FPathObject* nxt = *ContainingTiles.Find(til);
-		obj->neighbors[3] = nxt;
-		nxt->neighbors[1] = obj;
+		FPathObject* nxt = *ContainingTiles.Find(Til);
+		Obj->Neighbors[3] = nxt;
+		nxt->Neighbors[1] = Obj;
 	}
 }
 
 
-void FPathNavigationHandler::AddTile(TTile* tile)
+void FPathNavigationHandler::AddTile(TTile* Tile)
 {
-	TArray<FPathTree*> trees;
+	TArray<FPathTree*> Trees;
+	
+	//Get all the paths that could contain this tile
 	for (int x = 0; x < Paths.Num(); ++x)
 	{
-		if (Paths[x]->CouldBePartOfPath(tile))
-			trees.Add(Paths[x]);
+		if (Paths[x]->CouldBePartOfPath(Tile))
+			Trees.Add(Paths[x]);
 	}
 
-	if (trees.Num() == 0)
+	//Create a new tree if there are no existing paths that could contain the tile
+	if (Trees.Num() == 0)
 	{
-		FPathTree* tree = new FPathTree();
-		tree->AddTile(tile);
-		Paths.Add(tree);
+		FPathTree* Tree = new FPathTree();
+		Tree->AddTile(Tile);
+		Paths.Add(Tree);
 	}
-	else if (trees.Num() == 1)
+	//Add the tile to a tree if there is only one valid tree
+	else if (Trees.Num() == 1)
 	{
-		trees[0]->AddTile(tile);
+		Trees[0]->AddTile(Tile);
 	}
-	else if (trees.Num() > 1)
+	//Combine trees until there is only one left
+	else if (Trees.Num() > 1)
 	{
-		while (trees.Num() >= 2)
+		while (Trees.Num() >= 2)
 		{
-			FPathTree* pt = trees.Pop();
-			trees[0]->CombinePaths(pt);
-			Paths.Remove(pt);
-			delete pt;
+			FPathTree* PT = Trees.Pop();
+			Trees[0]->CombinePaths(PT);
+			Paths.Remove(PT);
+			delete PT;
 		}
 
-		Paths[0]->AddTile(tile);
+		//add the tile ot the remaining tree
+		Trees[0]->AddTile(Tile);
 	}
 }
 
-bool FPathNavigationHandler::TilesPartOfSamePath(TTile* t1, TTile* t2)
+bool FPathNavigationHandler::TilesPartOfSamePath(TTile* T1, TTile* T2)
 {
-	FPathTree* tree1 = nullptr;
-	FPathTree* tree2 = nullptr;
+	//The two trees
+	FPathTree* Tree1 = nullptr;
+	FPathTree* Tree2 = nullptr;
+
 	for (int x = 0; x < Paths.Num(); ++x)
 	{
-		if (tree1 == nullptr && Paths[x]->ContainsTile(t1))
+		//Set the first tree containing the first tile
+		if (Tree1 == nullptr && Paths[x]->ContainsTile(T1))
 		{
-			if (tree2 != nullptr)
-				return Paths[x] == tree2;
+			//If the other tree is already found, check if they are the same tree
+			if (Tree2 != nullptr)
+				return Paths[x] == Tree2;
 
-			tree1 = Paths[x];
+			Tree1 = Paths[x];
 		}
 
-		if (tree2 == nullptr && Paths[x]->ContainsTile(t2))
+		//Set the second tree containing the second tile
+		if (Tree2 == nullptr && Paths[x]->ContainsTile(T2))
 		{
-			if (tree1 != nullptr)
-				return Paths[x] == tree1;
+			//If the other tree is already found, check if they are the same tree
+			if (Tree1 != nullptr)
+				return Paths[x] == Tree1;
 
-			tree2 = Paths[x];
+			Tree2 = Paths[x];
 		}
 	}
 
 	return nullptr;
 }
 
-FPathTree* FPathNavigationHandler::GetAssociatedTreeForTile(TTile* ti)
+FPathTree* FPathNavigationHandler::GetAssociatedTreeForTile(TTile* Tile)
 {
+	//Find the tree that contains the tile
 	for (int x = 0; x < Paths.Num(); ++x)
 	{
-		if (Paths[x]->ContainsTile(ti))
+		if (Paths[x]->ContainsTile(Tile))
 			return Paths[x];
 	}
 
 	return nullptr;
 }
 
-TArray<TTile*> FPathNavigationHandler::GetPath(TTile* t1, TTile* t2)
+TArray<TTile*> FPathNavigationHandler::GetPath(TTile* T1, TTile* T2)
 {
-	TArray<TTile*> path;
+	//The Path to return
+	TArray<TTile*> Path;
 
-	if (!TilesPartOfSamePath(t1, t2))
-		return path;
+	//If the tiles aren't part of the same Path, the return an empty Path
+	if (!TilesPartOfSamePath(T1, T2))
+		return Path;
 
-	FPathTree* tree = GetAssociatedTreeForTile(t1);
+	//Get the tree that both tiles are in
+	FPathTree* Tree = GetAssociatedTreeForTile(T1);
 
-	FPathObject* st = tree->GetPathObject(t1);
-	FPathObject* end = tree->GetPathObject(t2);
+	//Get the starting and ending Path objects
+	FPathObject* StartTile = Tree->GetPathObject(T1);
+	FPathObject* EndTile = Tree->GetPathObject(T2);
 
-	TArray<FPathObject*> frontier;
-	frontier.Add(st);
+	///////Perform A* pathfinding algorithm///////////
+	 
+	//Create the fronteir and add the starting tile
+	TArray<FPathObject*> Frontier;
+	Frontier.Add(StartTile);
 
-	TMap<FPathObject*, FPathObject*> camefrom;
-	camefrom.Add(st, st);
-	TMap<FPathObject*, int> costsofar;
-	costsofar.Add(st, 0);
+	//The maps used for backtracing full Path
+	TMap<FPathObject*, FPathObject*> CameFrom;
+	CameFrom.Add(StartTile, StartTile);
 
-	while (frontier.Num() > 0)
+	//Store the lowest cost to get to this tile
+	TMap<FPathObject*, int> CostsSoFar;
+	CostsSoFar.Add(StartTile, 0);
+
+	while (Frontier.Num() > 0)
 	{
-		FPathObject* cur = frontier.Pop();
+		//Take the top node in the frontier
+		FPathObject* Current = Frontier.Pop();
 
-		for (FPathObject* nxt : cur->neighbors)
+		//Iterate over neighbors
+		for (FPathObject* Next : Current->Neighbors)
 		{
-			if (nxt == nullptr)
+			if (Next == nullptr)
 				continue;
 
-			float newcost = costsofar[cur] + 1;
-			if (!costsofar.Contains(nxt) || newcost < costsofar[nxt])
+			//Determine the new cost to get to this node
+			float NewCost = CostsSoFar[Current] + 1;
+
+			//Check if the node has been seen or if it has been reached by a lower cost Path
+			if (!CostsSoFar.Contains(Next) || NewCost < CostsSoFar[Next])
 			{
-				costsofar.Add(nxt, newcost);
-				frontier.Add(nxt);
-				camefrom.Add(nxt, cur);
+				//Add the next to the custs so far
+				CostsSoFar.Add(Next, NewCost);
+				//Add the next node to the frontier
+				Frontier.Add(Next);
+				//Store that the next node was reached from the Current node
+				CameFrom.Add(Next, Current);
 			}
 		}
 	}
 
-	FPathObject* n = end;
-	while (n != st)
+	//Retrace the shortest Path to the destination
+	FPathObject* n = EndTile;
+	while (n != StartTile)
 	{
-		path.Add(n->current);
-		FPathObject** a = camefrom.Find(n);
+		Path.Add(n->Current);
+		FPathObject** a = CameFrom.Find(n);
 		if (a == nullptr)
-			return path;
+			return Path;
 		else
 			n = *a;
 	}
 
-	path.Add(st->current);
+	//Add the starting tile to the Path
+	Path.Add(StartTile->Current);
 
-	Algo::Reverse(path);
+	//Reverse the Path
+	Algo::Reverse(Path);
 
-	return path;
+	return Path;
 }

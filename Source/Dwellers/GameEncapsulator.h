@@ -4,24 +4,41 @@
 
 #include "CoreMinimal.h"
 
-/**
- * 
- */
+/// <summary>
+/// Singleton instance containing all game information
+/// </summary>
 class DWELLERS_API GameEncapsulator
 {
 public:
 	GameEncapsulator();
 	~GameEncapsulator();
 
-	static void CreateGame(int mapsize, int chunksize, int cellsize, float cellheight);
+	/// <summary>
+	/// Creates a map with parameters
+	/// </summary>
+	/// <param Name="Mapsize">The width and Height of the map</param>
+	/// <param Name="Chunksize">The Size of a Chunk</param>
+	/// <param Name="Cellsize">The Size of a cell</param>
+	/// <param Name="Cellheight">The scale for one unit upwards between cells</param>
+	static void CreateGame(int Mapsize, int Chunksize, int Cellsize, float Cellheight);
+	
+	/// <summary>
+	/// Get the Singleton instance of the game
+	/// </summary>
+	/// <returns>The game instane</returns>
 	static GameEncapsulator* GetGame();
 
-	class WorldMap* map;
+	/// <summary>
+	/// The map used for world spawning and navigation
+	/// </summary>
+	class WorldMap* Map;
 
-	int mincull = 10000;
-	int maxcull = 15000;
+	//Culling distances
+	int MinCull = 10000;
+	int MaxCull = 15000;
 
 private:
+	//The game instance
 	static GameEncapsulator* gameencapsulator;
 
 };

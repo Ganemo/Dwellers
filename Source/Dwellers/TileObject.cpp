@@ -5,314 +5,349 @@
 #include "AnimalHotSpot.h"
 
 
-void FTileObject::AffectTile(TTile* owningtile, AWorldChunk* chunk) {}
+void FTileObject::AffectTile(TTile* OwningTile, AWorldChunk* Chunk) {}
 
-void FTileObject_Grass::AffectTile(TTile* owningtile, AWorldChunk* chunk)
+void FTileObject_Grass::AffectTile(TTile* OwningTile, AWorldChunk* Chunk)
 {
-	if (owningtile->type != ETileType::Ground)
+	//Make sure the owning tile is a ground tile
+	if (OwningTile->TileType != ETileType::Ground)
 		return;
+	
+	TGroundTile* GroundTile = (TGroundTile*)OwningTile;
 
-	TGroundTile* grnd = (TGroundTile*)owningtile;
+	UHierarchicalInstancedStaticMeshComponent* InstanceComponent;
 
-	UHierarchicalInstancedStaticMeshComponent* cmpt;
-
-	if (!chunk->ContainsMeshesFor(GetName()))
+	//If there are no instances of grass in this chunk, create an instance component
+	if (!Chunk->ContainsMeshesFor(GetName()))
 	{
-		cmpt = chunk->CreateMeshesFor(GetName());
+		InstanceComponent = Chunk->CreateMeshesFor(GetName());
 
-		UStaticMesh* msh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), NULL, TEXT("StaticMesh'/Game/FieldGrassPackVol1/Meshes/Grass/SM_grass028.SM_grass028'")));
-		UMaterialInterface* mat1 = Cast<UMaterialInterface>(StaticLoadObject(UMaterialInterface::StaticClass(), NULL, TEXT("MaterialInstanceConstant'/Game/FieldGrassPackVol1/Materials/ChildMaterials/M_grass_advanced_Inst.M_grass_advanced_Inst'")));
+		//Set with the mesh
+		InstanceComponent->SetStaticMesh(
+			Cast<UStaticMesh>(
+				StaticLoadObject(
+					UStaticMesh::StaticClass(),
+					NULL,
+					TEXT("StaticMesh'/Game/FieldGrassPackVol1/Meshes/Grass/SM_grass028.SM_grass028'")
+				)
+			)
+		);
 
-		cmpt->SetStaticMesh(msh);
-		cmpt->SetMaterial(0, mat1);
+		//Set the material
+		InstanceComponent->SetMaterial(0, 
+			Cast<UMaterialInterface>(
+				StaticLoadObject(
+					UMaterialInterface::StaticClass(),
+					NULL,
+					TEXT("MaterialInstanceConstant'/Game/FieldGrassPackVol1/Materials/ChildMaterials/M_grass_advanced_Inst.M_grass_advanced_Inst'")
+				)
+			)
+		);
 
-		cmpt->SetCastShadow(true);
-		cmpt->SetMobility(EComponentMobility::Static);
-		cmpt->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		cmpt->SetCullDistances(GameEncapsulator::GetGame()->mincull, GameEncapsulator::GetGame()->maxcull);
+		InstanceComponent->SetCastShadow(true);
+		InstanceComponent->SetMobility(EComponentMobility::Static);
+		InstanceComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		InstanceComponent->SetCullDistances(GameEncapsulator::GetGame()->MinCull, GameEncapsulator::GetGame()->MaxCull);
 	}
+	//Get the current instances of grass
 	else
 	{
-		cmpt = chunk->GetMeshesFor(GetName());
+		InstanceComponent = Chunk->GetMeshesFor(GetName());
 	}
 
-	float size = grnd->grassDensity * 4;
+	//Get the size of the grass instance mesh
+	float Size = GroundTile->grassDensity * 4;
 
-	instances.Add(
-		cmpt->AddInstance(
+	//Add the instance, at random rotation, and location deviation from the center of the tile
+	Instances.Add(
+		InstanceComponent->AddInstance(
 			FTransform(
 				FRotator(0, UFunctionLibrary::GetSeededRandInRange(0, 359), 0),
 				FVector(
-				(owningtile->location->x + UFunctionLibrary::GetSeededRandInRange(-.25, .25)) * GameEncapsulator::GetGame()->map->cellsize,
-				(owningtile->location->y + UFunctionLibrary::GetSeededRandInRange(-.25, .25)) * GameEncapsulator::GetGame()->map->cellsize,
-				owningtile->height * (GameEncapsulator::GetGame()->map->cellsize * GameEncapsulator::GetGame()->map->cliffheight)),
-				FVector(size, size, size*2)
+				(OwningTile->location->x + UFunctionLibrary::GetSeededRandInRange(-.25, .25)) * GameEncapsulator::GetGame()->Map->CellSize,
+				(OwningTile->location->y + UFunctionLibrary::GetSeededRandInRange(-.25, .25)) * GameEncapsulator::GetGame()->Map->CellSize,
+				OwningTile->Height * (GameEncapsulator::GetGame()->Map->CellSize * GameEncapsulator::GetGame()->Map->CliffHeight)),
+				FVector(Size, Size, Size*2)
 			)
 		)
 	);
-
-	//int grass = 2;
-	//for (int x = 0; x < grass; ++x)
-	//{
-	//	for (int y = 0; y < grass; ++y)
-	//	{
-	//		float size = grnd->grassDensity * 4;
-	//
-	//		instances.Add(
-	//			cmpt->AddInstance(
-	//				FTransform(
-	//					FRotator(0, UFunctionLibrary::GetSeededRandInRange(0, 359), 0),
-	//					FVector(
-	//						(owningtile->location->x + UFunctionLibrary::GetSeededRandInRange(-.25, .25)) * GameEncapsulator::GetGame()->map->cellsize,
-	//						(owningtile->location->y + UFunctionLibrary::GetSeededRandInRange(-.25, .25)) * GameEncapsulator::GetGame()->map->cellsize,
-	//						owningtile->height * (GameEncapsulator::GetGame()->map->cellsize * GameEncapsulator::GetGame()->map->cliffheight)),
-	//					FVector(size, size, size * 2)
-	//				)
-	//			)
-	//		);
-	//	}
-	//}
-
-	/*
-							(owningtile->location->x - .5 + ((1.0f / grass) * x)) * GameEncapsulator::GetGame()->map->cellsize,
-							(owningtile->location->y - .5 + ((1.0f / grass) * y)) * GameEncapsulator::GetGame()->map->cellsize,*/
 }
-void FTileObject_Grass::Destroy(TTile* owningtile, AWorldChunk* chunk)
+void FTileObject_Grass::Destroy(TTile* OwningTile, AWorldChunk* Chunk)
 {
-	for (int x = 0; x < instances.Num(); ++x)
+	//Remove all the instances
+	for (int x = 0; x < Instances.Num(); ++x)
 	{
-		UE_LOG(LogTemp, Log, TEXT("Removing: %d"), instances[x]);
-		chunk->RemoveMesh(GetName(), instances[x]);
+		UE_LOG(LogTemp, Log, TEXT("Removing: %d"), Instances[x]);
+		Chunk->RemoveMesh(GetName(), Instances[x]);
 	}
 }
 
-void FTileObject_CatTail::AffectTile(TTile* owningtile, AWorldChunk* chunk)
+void FTileObject_CatTail::AffectTile(TTile* OwningTile, AWorldChunk* Chunk)
 {
-	UHierarchicalInstancedStaticMeshComponent* cmpt;
+	UHierarchicalInstancedStaticMeshComponent* Cmpt;
 
-	if (!chunk->ContainsMeshesFor(GetName()))
+	//If there are no instances of cattails in this chunk, create an instance component
+	if (!Chunk->ContainsMeshesFor(GetName()))
 	{
-		cmpt = chunk->CreateMeshesFor(GetName());
+		Cmpt = Chunk->CreateMeshesFor(GetName());
 
-		UStaticMesh* msh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), NULL, TEXT("StaticMesh'/Game/FantasyEnvironment/Meshes/Cattail02.Cattail02'")));
-		UMaterialInterface* mat1 = Cast<UMaterialInterface>(StaticLoadObject(UMaterialInterface::StaticClass(), NULL, TEXT("MaterialInstanceConstant'/Game/Geometry/CatTail_Inst.CatTail_Inst'")));
+		Cmpt->SetStaticMesh(Cast<UStaticMesh>(
+			StaticLoadObject(
+				UStaticMesh::StaticClass(), NULL, TEXT("StaticMesh'/Game/FantasyEnvironment/Meshes/Cattail02.Cattail02'"))
+			)
+		);
+		Cmpt->SetMaterial(0, Cast<UMaterialInterface>(
+			StaticLoadObject(
+				UMaterialInterface::StaticClass(), NULL, TEXT("MaterialInstanceConstant'/Game/Geometry/CatTail_Inst.CatTail_Inst'"))
+			)
+		);
 
-		cmpt->SetStaticMesh(msh);
-		cmpt->SetMaterial(0, mat1);
-
-		cmpt->SetCastShadow(true);
-		cmpt->SetMobility(EComponentMobility::Static);
-		cmpt->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		cmpt->SetCullDistances(GameEncapsulator::GetGame()->mincull, GameEncapsulator::GetGame()->maxcull);
+		Cmpt->SetCastShadow(true);
+		Cmpt->SetMobility(EComponentMobility::Static);
+		Cmpt->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Cmpt->SetCullDistances(GameEncapsulator::GetGame()->MinCull, GameEncapsulator::GetGame()->MaxCull);
 	}
+	//Get the current instances of cattails
 	else
 	{
-		cmpt = chunk->GetMeshesFor(GetName());
+		Cmpt = Chunk->GetMeshesFor(GetName());
 	}
 
-	int tailnum = UFunctionLibrary::GetSeededRandInRange(1, 5);
-	for (int x = 0; x < tailnum; ++x)
+	//The number of cattail instances to spawn
+	int NumberOfTails = UFunctionLibrary::GetSeededRandInRange(1, 5);
+	for (int x = 0; x < NumberOfTails; ++x)
 	{
-		float size = UFunctionLibrary::GetSeededRandInRange(1, 1.5);
-		cmpt->AddInstance(
+		//Spawn a cattail at a random location based on the tile, rotation, and size
+		float Size = UFunctionLibrary::GetSeededRandInRange(1, 1.5);
+		Cmpt->AddInstance(
 			FTransform(
 				FRotator(0, UFunctionLibrary::GetSeededRandInRange(0, 359), 0),
 				FVector(
-					owningtile->location->x * GameEncapsulator::GetGame()->map->cellsize + UFunctionLibrary::GetSeededRandInRange(-GameEncapsulator::GetGame()->map->cellsize / 3, GameEncapsulator::GetGame()->map->cellsize / 3),
-					owningtile->location->y * GameEncapsulator::GetGame()->map->cellsize + UFunctionLibrary::GetSeededRandInRange(-GameEncapsulator::GetGame()->map->cellsize / 3, GameEncapsulator::GetGame()->map->cellsize / 3),
-					owningtile->height * (GameEncapsulator::GetGame()->map->cellsize * GameEncapsulator::GetGame()->map->cliffheight)),
-				FVector(size, size, size)
+					OwningTile->location->x * GameEncapsulator::GetGame()->Map->CellSize + UFunctionLibrary::GetSeededRandInRange(-GameEncapsulator::GetGame()->Map->CellSize / 3, GameEncapsulator::GetGame()->Map->CellSize / 3),
+					OwningTile->location->y * GameEncapsulator::GetGame()->Map->CellSize + UFunctionLibrary::GetSeededRandInRange(-GameEncapsulator::GetGame()->Map->CellSize / 3, GameEncapsulator::GetGame()->Map->CellSize / 3),
+					OwningTile->Height * (GameEncapsulator::GetGame()->Map->CellSize * GameEncapsulator::GetGame()->Map->CliffHeight)),
+				FVector(Size, Size, Size)
 			)
 		);
 	}
 }
 
-void FTileObject_Tree::AffectTile(TTile* owningtile, AWorldChunk* chunk)
+void FTileObject_Tree::AffectTile(TTile* OwningTile, AWorldChunk* Chunk)
 {
-	UHierarchicalInstancedStaticMeshComponent* cmpt;
+	UHierarchicalInstancedStaticMeshComponent* Cmpt;
 
-	if (!chunk->ContainsMeshesFor(GetName()))
+	//If there are no instances of this tree in this chunk, create an instance component
+	if (!Chunk->ContainsMeshesFor(GetName()))
 	{
-		cmpt = chunk->CreateMeshesFor(GetName());
+		Cmpt = Chunk->CreateMeshesFor(GetName());
 
-		UStaticMesh* msh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), NULL, TEXT("StaticMesh'/Game/FantasyEnvironment/Meshes/Tree29.Tree29'")));
-		UMaterialInterface* mat1 = Cast<UMaterialInterface>(StaticLoadObject(UMaterialInterface::StaticClass(), NULL, TEXT("MaterialInstanceConstant'/Game/FantasyEnvironment/Materials/Trunks01Mat_Inst.Trunks01Mat_Inst'")));
-		UMaterialInterface* mat2 = Cast<UMaterialInterface>(StaticLoadObject(UMaterialInterface::StaticClass(), NULL, TEXT("MaterialInstanceConstant'/Game/FantasyEnvironment/Materials/Decidious01Mat_Inst.Decidious01Mat_Inst'")));
+		Cmpt->SetStaticMesh(Cast<UStaticMesh>(
+			StaticLoadObject(
+				UStaticMesh::StaticClass(), NULL, TEXT("StaticMesh'/Game/FantasyEnvironment/Meshes/Tree29.Tree29'"))
+			)
+		);
+		Cmpt->SetMaterial(0, Cast<UMaterialInterface>(
+			StaticLoadObject(
+				UMaterialInterface::StaticClass(), NULL, TEXT("MaterialInstanceConstant'/Game/FantasyEnvironment/Materials/Trunks01Mat_Inst.Trunks01Mat_Inst'"))
+			)
+		);
+		Cmpt->SetMaterial(1, Cast<UMaterialInterface>(
+			StaticLoadObject(
+				UMaterialInterface::StaticClass(), NULL, TEXT("MaterialInstanceConstant'/Game/FantasyEnvironment/Materials/Decidious01Mat_Inst.Decidious01Mat_Inst'"))
+			)
+		);
 
-		cmpt->SetStaticMesh(msh);
-		cmpt->SetMaterial(0, mat1);
-		cmpt->SetMaterial(1, mat2);
-
-		cmpt->SetCastShadow(true);
-		cmpt->SetMobility(EComponentMobility::Static);
-		cmpt->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		cmpt->SetCullDistances(GameEncapsulator::GetGame()->mincull, GameEncapsulator::GetGame()->maxcull);
+		Cmpt->SetCastShadow(true);
+		Cmpt->SetMobility(EComponentMobility::Static);
+		Cmpt->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Cmpt->SetCullDistances(GameEncapsulator::GetGame()->MinCull, GameEncapsulator::GetGame()->MaxCull);
 	}
+	//Get the current instances of this tree
 	else
 	{
-		cmpt = chunk->GetMeshesFor(GetName());
+		Cmpt = Chunk->GetMeshesFor(GetName());
 	}
 
-	cmpt->AddInstance(
+	//Spawn a tree at a random location based on the tile, rotation, and size
+	Cmpt->AddInstance(
 		FTransform(
 			FRotator(0, UFunctionLibrary::GetSeededRandInRange(0, 359), 0),
 			FVector(
-				owningtile->location->x * GameEncapsulator::GetGame()->map->cellsize + UFunctionLibrary::GetSeededRandInRange(-GameEncapsulator::GetGame()->map->cellsize / 8, GameEncapsulator::GetGame()->map->cellsize / 8),
-				owningtile->location->y * GameEncapsulator::GetGame()->map->cellsize + UFunctionLibrary::GetSeededRandInRange(-GameEncapsulator::GetGame()->map->cellsize / 8, GameEncapsulator::GetGame()->map->cellsize / 8),
-				owningtile->height * (GameEncapsulator::GetGame()->map->cellsize * GameEncapsulator::GetGame()->map->cliffheight)
+				OwningTile->location->x * GameEncapsulator::GetGame()->Map->CellSize + UFunctionLibrary::GetSeededRandInRange(-GameEncapsulator::GetGame()->Map->CellSize / 8, GameEncapsulator::GetGame()->Map->CellSize / 8),
+				OwningTile->location->y * GameEncapsulator::GetGame()->Map->CellSize + UFunctionLibrary::GetSeededRandInRange(-GameEncapsulator::GetGame()->Map->CellSize / 8, GameEncapsulator::GetGame()->Map->CellSize / 8),
+				OwningTile->Height * (GameEncapsulator::GetGame()->Map->CellSize * GameEncapsulator::GetGame()->Map->CliffHeight)
 			),
 			FVector(UFunctionLibrary::GetSeededRandInRange(.45, .5), UFunctionLibrary::GetSeededRandInRange(.45, .5), UFunctionLibrary::GetSeededRandInRange(.45, .7))
 		)
 	);
 }
 
-void FTileObject_Stone::AffectTile(TTile* owningtile, AWorldChunk* chunk)
+void FTileObject_Stone::AffectTile(TTile* OwningTile, AWorldChunk* Chunk)
 {
-	UHierarchicalInstancedStaticMeshComponent* cmpt;
+	UHierarchicalInstancedStaticMeshComponent* Cmpt;
 
-	if (!chunk->ContainsMeshesFor(GetName()))
+	//If there are no instances of this stone in this chunk, create an instance component
+	if (!Chunk->ContainsMeshesFor(GetName()))
 	{
-		cmpt = chunk->CreateMeshesFor(GetName());
+		Cmpt = Chunk->CreateMeshesFor(GetName());
 
 		UStaticMesh* msh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), NULL, TEXT("StaticMesh'/Game/FantasyEnvironment/Meshes/Rock12.Rock12'")));
 		UMaterialInterface* mat1 = Cast<UMaterialInterface>(StaticLoadObject(UMaterialInterface::StaticClass(), NULL, TEXT("MaterialInstanceConstant'/Game/FantasyEnvironment/Materials/Rocks01Mat_Inst.Rocks01Mat_Inst'")));
 
-		cmpt->SetStaticMesh(msh);
-		cmpt->SetMaterial(0, mat1);
+		Cmpt->SetStaticMesh(msh);
+		Cmpt->SetMaterial(0, mat1);
 
-		cmpt->SetCastShadow(true);
-		cmpt->SetMobility(EComponentMobility::Static);
-		cmpt->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		cmpt->SetCullDistances(GameEncapsulator::GetGame()->mincull, GameEncapsulator::GetGame()->maxcull);
+		Cmpt->SetCastShadow(true);
+		Cmpt->SetMobility(EComponentMobility::Static);
+		Cmpt->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Cmpt->SetCullDistances(GameEncapsulator::GetGame()->MinCull, GameEncapsulator::GetGame()->MaxCull);
 	}
+	//Get the current instances of this stone
 	else
 	{
-		cmpt = chunk->GetMeshesFor(GetName());
+		Cmpt = Chunk->GetMeshesFor(GetName());
 	}
 
-	cmpt->AddInstance(
+	//Spawn a stone at a random location based on the tile, rotation, and size
+	Cmpt->AddInstance(
 		FTransform(
 			FRotator(UFunctionLibrary::GetSeededRandInRange(0, 359), UFunctionLibrary::GetSeededRandInRange(0, 359), UFunctionLibrary::GetSeededRandInRange(0, 359)),
 			FVector(
-				owningtile->location->x * GameEncapsulator::GetGame()->map->cellsize + UFunctionLibrary::GetSeededRandInRange(-GameEncapsulator::GetGame()->map->cellsize / 8, GameEncapsulator::GetGame()->map->cellsize / 8),
-				owningtile->location->y * GameEncapsulator::GetGame()->map->cellsize + UFunctionLibrary::GetSeededRandInRange(-GameEncapsulator::GetGame()->map->cellsize / 8, GameEncapsulator::GetGame()->map->cellsize / 8),
-				owningtile->height * (GameEncapsulator::GetGame()->map->cellsize * GameEncapsulator::GetGame()->map->cliffheight)
+				OwningTile->location->x * GameEncapsulator::GetGame()->Map->CellSize + UFunctionLibrary::GetSeededRandInRange(-GameEncapsulator::GetGame()->Map->CellSize / 8, GameEncapsulator::GetGame()->Map->CellSize / 8),
+				OwningTile->location->y * GameEncapsulator::GetGame()->Map->CellSize + UFunctionLibrary::GetSeededRandInRange(-GameEncapsulator::GetGame()->Map->CellSize / 8, GameEncapsulator::GetGame()->Map->CellSize / 8),
+				OwningTile->Height * (GameEncapsulator::GetGame()->Map->CellSize * GameEncapsulator::GetGame()->Map->CliffHeight)
 			),
 			FVector(UFunctionLibrary::GetSeededRandInRange(.45, 1), UFunctionLibrary::GetSeededRandInRange(.45, 1), UFunctionLibrary::GetSeededRandInRange(.45, 1))
 		)
 	);
 }
 
-void FTileObject_AnimalHotspot::AffectTile(TTile* owningtile, AWorldChunk* chunk)
+void FTileObject_AnimalHotspot::AffectTile(TTile* OwningTile, AWorldChunk* Chunk)
 {
-	this->hotspot = (AAnimalHotSpot*)chunk->GetWorld()->SpawnActor(
+	//Spawn An animal hotspot 
+	this->hotspot = (AAnimalHotSpot*)Chunk->GetWorld()->SpawnActor(
 		AAnimalHotSpot::StaticClass(),
 		new FVector(
-			owningtile->location->x * GameEncapsulator::GetGame()->map->cellsize,
-			owningtile->location->y * GameEncapsulator::GetGame()->map->cellsize,
-			owningtile->height * (GameEncapsulator::GetGame()->map->cellsize * GameEncapsulator::GetGame()->map->cliffheight)
+			OwningTile->location->x * GameEncapsulator::GetGame()->Map->CellSize,
+			OwningTile->location->y * GameEncapsulator::GetGame()->Map->CellSize,
+			OwningTile->Height * (GameEncapsulator::GetGame()->Map->CellSize * GameEncapsulator::GetGame()->Map->CliffHeight)
 		),
 		new FRotator()
 	);
 }
 
+//Get a vertex index for a vertex used for a certain tile
 int GetPointForTile(int xpos, int ypos, int xdiff, int ydiff)
 {
-	return ((GameEncapsulator::GetGame()->map->chunksize * 2 + 2) + ((GameEncapsulator::GetGame()->map->chunksize * 2 + 1) * xpos * 2) + (2 * ypos)) + xdiff * (GameEncapsulator::GetGame()->map->chunksize * 2 + 1) + ydiff;
+	return ((GameEncapsulator::GetGame()->Map->ChunkSize * 2 + 2) + ((GameEncapsulator::GetGame()->Map->ChunkSize * 2 + 1) * xpos * 2) + (2 * ypos)) + xdiff * (GameEncapsulator::GetGame()->Map->ChunkSize * 2 + 1) + ydiff;
 }
 
-void FTileObject_Road::AffectTile(TTile* owningtile, AWorldChunk* chunk)
+void FTileObject_Road::AffectTile(TTile* OwningTile, AWorldChunk* Chunk)
 {
-	int xrelative = owningtile->location->x % GameEncapsulator::GetGame()->map->chunksize;
-	int yrelative = owningtile->location->y % GameEncapsulator::GetGame()->map->chunksize;
+	//Get the relative tile index for the chunk
+	int xrelative = OwningTile->location->x % GameEncapsulator::GetGame()->Map->ChunkSize;
+	int yrelative = OwningTile->location->y % GameEncapsulator::GetGame()->Map->ChunkSize;
 
-	chunk->Colors[GetPointForTile(xrelative, yrelative, 0, 0)] = FColor(0,0,255,0);
+	//Set the color of the center vertex of the tile to a road
+	Chunk->Colors[GetPointForTile(xrelative, yrelative, 0, 0)] = FColor(0,0,255,0);
 
 	TTile* ti;
 
-	ti = GameEncapsulator::GetGame()->map->GetTile(owningtile->location->x + 1, owningtile->location->y);
+	//Set color of right most point if right tile is a road
+	ti = GameEncapsulator::GetGame()->Map->GetTile(OwningTile->location->x + 1, OwningTile->location->y);
 	if (ti != nullptr && ti->object != nullptr)
 	{
 		if (ti->object->GetName().Equals("Road"))
 		{
-			chunk->Colors[GetPointForTile(xrelative, yrelative, 1, 0)] = FColor(0, 0, 255, 0);
+			Chunk->Colors[GetPointForTile(xrelative, yrelative, 1, 0)] = FColor(0, 0, 255, 0);
 		}
 	}
 
-	ti = GameEncapsulator::GetGame()->map->GetTile(owningtile->location->x - 1, owningtile->location->y);
+	//Set color of left most point if left tile is a road
+	ti = GameEncapsulator::GetGame()->Map->GetTile(OwningTile->location->x - 1, OwningTile->location->y);
 	if (ti != nullptr && ti->object != nullptr)
 	{
 		if (ti->object->GetName().Equals("Road"))
 		{
-			chunk->Colors[GetPointForTile(xrelative, yrelative, -1, 0)] = FColor(0, 0, 255, 0);
+			Chunk->Colors[GetPointForTile(xrelative, yrelative, -1, 0)] = FColor(0, 0, 255, 0);
 		}
 	}
 
-	ti = GameEncapsulator::GetGame()->map->GetTile(owningtile->location->x, owningtile->location->y - 1);
+	//Set color of southern most point if southern tile is a road
+	ti = GameEncapsulator::GetGame()->Map->GetTile(OwningTile->location->x, OwningTile->location->y - 1);
 	if (ti != nullptr && ti->object != nullptr)
 	{
 		if (ti->object->GetName().Equals("Road"))
 		{
-			chunk->Colors[GetPointForTile(xrelative, yrelative, 0, -1)] = FColor(0, 0, 255, 0);
+			Chunk->Colors[GetPointForTile(xrelative, yrelative, 0, -1)] = FColor(0, 0, 255, 0);
 		}
 	}
 
-	ti = GameEncapsulator::GetGame()->map->GetTile(owningtile->location->x, owningtile->location->y + 1);
+	//Set color of northern most point if northern tile is a road
+	ti = GameEncapsulator::GetGame()->Map->GetTile(OwningTile->location->x, OwningTile->location->y + 1);
 	if (ti != nullptr && ti->object != nullptr)
 	{
 		if (ti->object->GetName().Equals("Road"))
 		{
-			chunk->Colors[GetPointForTile(xrelative, yrelative, 0, 1)] = FColor(0, 0, 255, 0);
+			Chunk->Colors[GetPointForTile(xrelative, yrelative, 0, 1)] = FColor(0, 0, 255, 0);
 		}
 	}
 
-	chunk->UpdateMesh(0);
+	//Update the mesh to reflect the changes
+	Chunk->UpdateMesh(0);
 }
 
-void FTileObject_Road::Destroy(TTile* owningtile, AWorldChunk* chunk)
+void FTileObject_Road::Destroy(TTile* OwningTile, AWorldChunk* Chunk)
 {
-	int xrelative = owningtile->location->x % GameEncapsulator::GetGame()->map->chunksize;
-	int yrelative = owningtile->location->y % GameEncapsulator::GetGame()->map->chunksize;
+	//Get the relative tile index for the chunk
+	int xrelative = OwningTile->location->x % GameEncapsulator::GetGame()->Map->ChunkSize;
+	int yrelative = OwningTile->location->y % GameEncapsulator::GetGame()->Map->ChunkSize;
 
-	chunk->Colors[GetPointForTile(xrelative, yrelative, 0, 0)] = owningtile->GetColor();
+	//Set the color back to the original tile color
+	Chunk->Colors[GetPointForTile(xrelative, yrelative, 0, 0)] = OwningTile->GetColor();
 
 	TTile* ti;
 
-	ti = GameEncapsulator::GetGame()->map->GetTile(owningtile->location->x + 1, owningtile->location->y);
+	//Set color of right most point if right tile is a road
+	ti = GameEncapsulator::GetGame()->Map->GetTile(OwningTile->location->x + 1, OwningTile->location->y);
 	if (ti != nullptr && ti->object != nullptr)
 	{
 		if (ti->object->GetName().Equals("Road"))
 		{
-			chunk->Colors[GetPointForTile(xrelative, yrelative, 1, 0)] = owningtile->GetColor();
+			Chunk->Colors[GetPointForTile(xrelative, yrelative, 1, 0)] = OwningTile->GetColor();
 		}
 	}
 
-	ti = GameEncapsulator::GetGame()->map->GetTile(owningtile->location->x - 1, owningtile->location->y);
+	//Set color of left most point if left tile is a road
+	ti = GameEncapsulator::GetGame()->Map->GetTile(OwningTile->location->x - 1, OwningTile->location->y);
 	if (ti != nullptr && ti->object != nullptr)
 	{
 		if (ti->object->GetName().Equals("Road"))
 		{
-			chunk->Colors[GetPointForTile(xrelative, yrelative, -1, 0)] = owningtile->GetColor();
+			Chunk->Colors[GetPointForTile(xrelative, yrelative, -1, 0)] = OwningTile->GetColor();
 		}
 	}
 
-	ti = GameEncapsulator::GetGame()->map->GetTile(owningtile->location->x, owningtile->location->y - 1);
+	//Set color of southern most point if southern tile is a road
+	ti = GameEncapsulator::GetGame()->Map->GetTile(OwningTile->location->x, OwningTile->location->y - 1);
 	if (ti != nullptr && ti->object != nullptr)
 	{
 		if (ti->object->GetName().Equals("Road"))
 		{
-			chunk->Colors[GetPointForTile(xrelative, yrelative, 0, -1)] = owningtile->GetColor();
+			Chunk->Colors[GetPointForTile(xrelative, yrelative, 0, -1)] = OwningTile->GetColor();
 		}
 	}
 
-	ti = GameEncapsulator::GetGame()->map->GetTile(owningtile->location->x, owningtile->location->y + 1);
+	//Set color of northern most point if northern tile is a road
+	ti = GameEncapsulator::GetGame()->Map->GetTile(OwningTile->location->x, OwningTile->location->y + 1);
 	if (ti != nullptr && ti->object != nullptr)
 	{
 		if (ti->object->GetName().Equals("Road"))
 		{
-			chunk->Colors[GetPointForTile(xrelative, yrelative, 0, 1)] = owningtile->GetColor();
+			Chunk->Colors[GetPointForTile(xrelative, yrelative, 0, 1)] = OwningTile->GetColor();
 		}
 	}
 
-	chunk->UpdateMesh(0);
+	//Update the mesh to reflect the changes
+	Chunk->UpdateMesh(0);
 }

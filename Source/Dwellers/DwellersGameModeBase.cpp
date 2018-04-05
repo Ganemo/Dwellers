@@ -15,7 +15,8 @@ ADwellersGameModeBase::ADwellersGameModeBase()
 
 void ADwellersGameModeBase::BeginPlay()
 {
-	light = (ADirectionalLight*)GetWorld()->SpawnActor(ADirectionalLight::StaticClass());
-	light->GetLightComponent()->bUseRayTracedDistanceFieldShadows = true;
-	light->SetMobility(EComponentMobility::Movable);
+	//Spawn and set light properties
+	Light = (ADirectionalLight*)GetWorld()->SpawnActor(ADirectionalLight::StaticClass());
+	Light->GetLightComponent()->bUseRayTracedDistanceFieldShadows = true;
+	Light->SetMobility(EComponentMobility::Movable);
 }

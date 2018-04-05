@@ -16,28 +16,29 @@ AGodCameraController::AGodCameraController()
 }
 
 void AGodCameraController::BeginPlay()
-{/*
-	AGodCamera* pl = GetWorld()->SpawnActor<AGodCamera>();
-	Possess(pl);*/
-
+{
 	this->bShowMouseCursor = true;
 	this->bEnableClickEvents = true;
 	this->bEnableMouseOverEvents = true;
 
+	//Make Current player action to making a road on click
 	CurrentAction = new PlayerAction_MakeRoad();
 }
 
-void AGodCameraController::Possess(APawn* plyr)
+void AGodCameraController::Possess(APawn* Player)
 {
-	ControllingPlayer = Cast<AGodCamera>(plyr);
-	this->SetViewTarget(plyr);
-	this->AttachToPawn(plyr);
+	ControllingPlayer = Cast<AGodCamera>(Player);
+
+	//Make the player camera the main camera
+	this->SetViewTarget(Player);
+	this->AttachToPawn(Player);
 }
 
 void AGodCameraController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 
+	//Bind input dispatches
 	this->InputComponent->BindAxis("Zoom", this, &AGodCameraController::Zoom);
 	this->InputComponent->BindAxis("Move_Right", this, &AGodCameraController::Move_Right);
 	this->InputComponent->BindAxis("Move_Forward", this, &AGodCameraController::Move_Forward);
@@ -47,191 +48,136 @@ void AGodCameraController::SetupInputComponent()
 	this->InputComponent->BindAction("LeftClick", EInputEvent::IE_Released, this, &AGodCameraController::LeftClick_Up);
 }
 
-void AGodCameraController::Tick(float dt)
+void AGodCameraController::Tick(float DT)
 {
-	FVector loc;
-	FVector dir;
-
-	if (DeprojectMousePositionToWorld(loc, dir))
-	{
-		FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("RV_Trace")), false, this);
-		RV_TraceParams.bTraceComplex = false;
-		RV_TraceParams.bTraceAsyncScene = true;
-		RV_TraceParams.bReturnPhysicalMaterial = false;
-		RV_TraceParams.TraceTag = TraceTag;
-
-		//Re-initialize hit info
-		FHitResult RV_Hit(ForceInit);
-
-		//call GetWorld() from within an actor extending class
-		GetWorld()->LineTraceSingleByChannel(
-			RV_Hit,        //result
-			loc,    //start
-			loc + (dir * 20000), //end
-			ECC_GameTraceChannel2, //collision channel
-			RV_TraceParams
-		);
-
-		if (RV_Hit.bBlockingHit)
-		{
-			TTile* til = GameEncapsulator::GetGame()->map->GetTileAtLocation(FVector(RV_Hit.ImpactPoint.X + GameEncapsulator::GetGame()->map->cellsize / 2, RV_Hit.ImpactPoint.Y + GameEncapsulator::GetGame()->map->cellsize / 2, 0));
-			if (til != nullptr)
-			{
-				DrawDebugBox(
-					GetWorld(),
-					FVector(
-						til->location->x * GameEncapsulator::GetGame()->map->cellsize,
-						til->location->y * GameEncapsulator::GetGame()->map->cellsize,
-						til->height * GameEncapsulator::GetGame()->map->cliffheight * GameEncapsulator::GetGame()->map->cellsize),
-					FVector(GameEncapsulator::GetGame()->map->cellsize / 2, GameEncapsulator::GetGame()->map->cellsize / 2, 1),
-					FColor(255, 0, 0),
-					false, -1, 0,
-					12.333
-				);
-			}
-		}
-	}
+	DoHitTrace();
+	DrawDebugBoxOnTile();
+	UpdatePlayerAction();
 }
 
-void AGodCameraController::Zoom(float axisvalue)
+void AGodCameraController::Zoom(float AxisVal)
 {
+	//Make sure the player being controlled is valid
 	if (ControllingPlayer != nullptr)
 	{
-		ControllingPlayer->SpringArm->TargetArmLength += 50 * axisvalue;
+		//Increase or decrease the camera distance
+		ControllingPlayer->SpringArm->TargetArmLength += 50 * AxisVal;
 
+		//Make sure the arm length is not negative
 		if(ControllingPlayer->SpringArm->TargetArmLength < 0)
 			ControllingPlayer->SpringArm->TargetArmLength = 0;
 	}
 }
-void AGodCameraController::Move_Right(float axisval)
+void AGodCameraController::Move_Right(float AxisVal)
 {
+	//Make sure the player being controlled is valid
 	if (ControllingPlayer != nullptr)
 	{
-		ControllingPlayer->AddActorLocalOffset(FVector(0, axisval * (15 * (ControllingPlayer->SpringArm->TargetArmLength / 3000)), 0));
+		//Move the camera left or right
+		ControllingPlayer->AddActorLocalOffset(FVector(0, AxisVal * (15 * (ControllingPlayer->SpringArm->TargetArmLength / 3000)), 0));
 	}
 }
-void AGodCameraController::Move_Forward(float axisval)
+void AGodCameraController::Move_Forward(float AxisVal)
 {
+	//Make sure the player being controlled is valid
 	if (ControllingPlayer != nullptr)
 	{
-		ControllingPlayer->AddActorLocalOffset(FVector(axisval * (15 * (ControllingPlayer->SpringArm->TargetArmLength / 3000)), 0, 0));
+		//Move the the camera forward or back
+		ControllingPlayer->AddActorLocalOffset(FVector(AxisVal * (15 * (ControllingPlayer->SpringArm->TargetArmLength / 3000)), 0, 0));
 	}
 }
-void AGodCameraController::Rotate(float axisval)
+void AGodCameraController::Rotate(float AxisVal)
 {
+	//Make sure the player being controlled is valid
 	if (ControllingPlayer != nullptr)
-		ControllingPlayer->AddActorWorldRotation(FRotator(0, axisval * 1, 0));
+	{
+		//Rotate the player around, only changing the yaw
+		ControllingPlayer->AddActorWorldRotation(FRotator(0, AxisVal * 1, 0));
+	}
 }
 
 void AGodCameraController::LeftClick_Down()
 {
-	FVector loc;
-	FVector dir;
-
-	if (DeprojectMousePositionToWorld(loc, dir))
+	//Fire the Current action's click down event
+	if (CurrentTile != nullptr)
 	{
-		FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("RV_Trace")), false, this);
-		RV_TraceParams.bTraceComplex = false;
-		RV_TraceParams.bTraceAsyncScene = true;
-		RV_TraceParams.bReturnPhysicalMaterial = false;
-		RV_TraceParams.TraceTag = TraceTag;
-
-		//Re-initialize hit info
-		FHitResult RV_Hit(ForceInit);
-
-		//call GetWorld() from within an actor extending class
-		GetWorld()->LineTraceSingleByChannel(
-			RV_Hit,        //result
-			loc,    //start
-			loc + (dir * 20000), //end
-			ECC_GameTraceChannel2, //collision channel
-			RV_TraceParams
-		);
-
-		/*DrawDebugLine(
-			GetWorld(),
-			loc,
-			loc + (dir * 20000),
-			FColor(255, 0, 0),
-			false, 5, 0,
-			12.333
-		);*/
-
-		if (RV_Hit.bBlockingHit)
-		{
-			/*UE_LOG(LogTemp, Log, TEXT("Click Hit!"), RV_Hit.ImpactPoint.X, RV_Hit.ImpactPoint.Y);
-			UE_LOG(LogTemp, Log, TEXT("\tLocation:\t%f\t%f"), RV_Hit.ImpactPoint.X, RV_Hit.ImpactPoint.Y);
-			UE_LOG(LogTemp, Log, TEXT("\tActor Hit:\t%s"), *RV_Hit.Actor->GetName());*/
-
-			TTile* til = GameEncapsulator::GetGame()->map->GetTileAtLocation(FVector(RV_Hit.ImpactPoint.X + GameEncapsulator::GetGame()->map->cellsize / 2, RV_Hit.ImpactPoint.Y + GameEncapsulator::GetGame()->map->cellsize / 2, 0));
-			if (til != nullptr)
-			{
-				/*UE_LOG(LogTemp, Log, TEXT("\tTile At:\t%f\t%f"), til->location->x, til->location->y);
-
-				DrawDebugBox(
-					GetWorld(),
-					FVector(
-						til->location->x * GameEncapsulator::GetGame()->cellsize,
-						til->location->y * GameEncapsulator::GetGame()->cellsize,
-						til->height * GameEncapsulator::GetGame()->cliffheight * GameEncapsulator::GetGame()->cellsize),
-					FVector(GameEncapsulator::GetGame()->cellsize / 2, GameEncapsulator::GetGame()->cellsize / 2, 1),
-					FColor(255, 0, 0),
-					false, 5, 0,
-					12.333
-				);
-
-				AWorldChunk* chnk = GameEncapsulator::GetGame()->FindChunkWithTile(til);
-				if (chnk != nullptr)
-				{
-					UE_LOG(LogTemp, Log, TEXT("\tIn Chunk:\t%s"), *chnk->GetName());
-				}*/
-
-				//GameEncapsulator::GetGame()->map->MakeTileRoad(til);
-				CurrentAction->ClickDown(til);
-			}
-
-		}
+		CurrentAction->ClickDown(CurrentTile);
 	}
-
 }
 
 void AGodCameraController::LeftClick_Up()
 {
-	FVector loc;
-	FVector dir;
-
-	if (DeprojectMousePositionToWorld(loc, dir))
+	//Fire the Current action's click up event
+	if (CurrentTile != nullptr)
 	{
+		CurrentAction->ClickUp(CurrentTile);
+	}
+}
+
+void AGodCameraController::DoHitTrace()
+{
+	FVector Location;
+	FVector Direction;
+
+	//Get the mouse location in world space
+	if (DeprojectMousePositionToWorld(Location, Direction))
+	{
+		//initialize the trace params
 		FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("RV_Trace")), false, this);
 		RV_TraceParams.bTraceComplex = false;
 		RV_TraceParams.bTraceAsyncScene = true;
 		RV_TraceParams.bReturnPhysicalMaterial = false;
+		//Tag used for debug
 		RV_TraceParams.TraceTag = TraceTag;
 
-		//Re-initialize hit info
-		FHitResult RV_Hit(ForceInit);
-
-		//call GetWorld() from within an actor extending class
+		//Do the line trace
 		GetWorld()->LineTraceSingleByChannel(
-			RV_Hit,        //result
-			loc,    //start
-			loc + (dir * 20000), //end
-			ECC_GameTraceChannel2, //collision channel
+			RV_Hit,        
+			Location,    
+			Location + (Direction * 20000), 
+			ECC_GameTraceChannel2,
 			RV_TraceParams
 		);
 
-
+		//Check if the hit is a blocking hit
 		if (RV_Hit.bBlockingHit)
 		{
-
-			TTile* til = GameEncapsulator::GetGame()->map->GetTileAtLocation(FVector(RV_Hit.ImpactPoint.X + GameEncapsulator::GetGame()->map->cellsize / 2, RV_Hit.ImpactPoint.Y + GameEncapsulator::GetGame()->map->cellsize / 2, 0));
-			if (til != nullptr)
-			{
-				CurrentAction->ClickUp(til);
-				//GameEncapsulator::GetGame()->map->MakeTileRoad(til);
-			}
-
+			//Get the tile at the Current location
+			CurrentTile = GameEncapsulator::GetGame()->Map->GetTileAtLocation(
+				FVector(
+					RV_Hit.ImpactPoint.X + GameEncapsulator::GetGame()->Map->CellSize / 2,
+					RV_Hit.ImpactPoint.Y + GameEncapsulator::GetGame()->Map->CellSize / 2,
+					0)
+			);
 		}
 	}
+}
 
+void AGodCameraController::DrawDebugBoxOnTile()
+{
+	//Makes sure the tile is valid
+	if (CurrentTile != nullptr)
+	{
+		//Draw the debug tile
+		DrawDebugBox(
+			GetWorld(),
+			FVector(
+				CurrentTile->location->x * GameEncapsulator::GetGame()->Map->CellSize,
+				CurrentTile->location->y * GameEncapsulator::GetGame()->Map->CellSize,
+				CurrentTile->Height * GameEncapsulator::GetGame()->Map->CliffHeight * GameEncapsulator::GetGame()->Map->CellSize),
+			FVector(GameEncapsulator::GetGame()->Map->CellSize / 2, GameEncapsulator::GetGame()->Map->CellSize / 2, 1),
+			FColor(255, 0, 0),
+			false, -1, 0,
+			12.333
+		);
+	}
+}
+
+void AGodCameraController::UpdatePlayerAction()
+{
+	//Update the Current tile's tick event
+	if (CurrentTile != nullptr)
+	{
+		CurrentAction->ClickTick(CurrentTile);
+	}
 }

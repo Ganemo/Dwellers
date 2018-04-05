@@ -7,19 +7,22 @@
 #include "Engine/DirectionalLight.h"
 #include "DwellersGameModeBase.generated.h"
 
-/**
- * 
- */
+/// <summary>
+/// Game mode for the basic game.
+/// Spawns a directional light to use for a day/night cycle
+/// </summary>
 UCLASS()
 class DWELLERS_API ADwellersGameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
-	
 	
 public:
 	ADwellersGameModeBase();
 
 	void BeginPlay() override;
 	
-	ADirectionalLight* light;
+	/// <summary>
+	/// Light used for day/night cycles
+	/// </summary>
+	ADirectionalLight* Light;
 };

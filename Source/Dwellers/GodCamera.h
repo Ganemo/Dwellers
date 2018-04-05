@@ -14,23 +14,20 @@ class DWELLERS_API AGodCamera : public APawn
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this pawn's properties
 	AGodCamera();
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	UCameraComponent* Camera;
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	USpringArmComponent* SpringArm;
-
-protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-public:	
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
-	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	/// <summary>
+	/// The player camera
+	/// </summary>
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UCameraComponent* Camera;
+
+	/// <summary>
+	/// The springarm for the camera
+	/// </summary>
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	USpringArmComponent* SpringArm;
 };

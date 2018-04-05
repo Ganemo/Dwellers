@@ -10,75 +10,107 @@
 #include "WorldMap.h"
 #include "TileMovementFunctions.generated.h"
 
+/// <summary>
+/// A priority node used in a linked list for A* pathfinding
+/// </summary>
 class DWELLERS_API PriorityNode
 {
 
 public:
-	TTile* tile;
-	float priority;
+	/// <summary>
+	/// The node's tile
+	/// </summary>
+	TTile* Tile;
 
-	PriorityNode* next = nullptr;
+	/// <summary>
+	/// The node's priority, created based on a heuristic
+	/// </summary>
+	float Priority;
 
-	PriorityNode::PriorityNode(TTile* t, float pri)
+	/// <summary>
+	/// The next node in the linked list
+	/// </summary>
+	PriorityNode* Next = nullptr;
+
+	PriorityNode::PriorityNode(TTile* Tile, float Priority)
 	{
-		tile = t;
-		priority = pri;
+		this->Tile = Tile;
+		this->Priority = Priority;
 	}
 };
 
+/// <summary>
+/// A priority queue used in A* pathfinding
+/// Priority is in ascending order
+/// </summary>
 class DWELLERS_API PriorityQueue
 {
 
 public:
+	/// <summary>
+	/// The head of the queue
+	/// </summary>
 	PriorityNode* Head = nullptr;
 
-	void PriorityQueue::AddNode(PriorityNode* node)
+	/// <summary>
+	/// Add a node to the queue
+	/// </summary>
+	/// <param Name="Node">The node to add</param>
+	void PriorityQueue::AddNode(PriorityNode* Node)
 	{
-		if (node == nullptr)
+		//Make sure node is valid
+		if (Node == nullptr)
 			return;
 
+		//Set the node to the head if there is no head
 		if (Head == nullptr)
 		{
-			Head = node;
+			Head = Node;
 			return;
 		}
 
-		if (Head->next == nullptr)
+		//Add the new node to in the correct position based on ascending priority
+		PriorityNode* Current = Head;
+		while (Current->Next != nullptr)
 		{
-			Head->next = node;
-			return;
-		}
-
-		PriorityNode* current = Head;
-		while (current->next != nullptr)
-		{
-			if (node->priority < current->next->priority)
+			//If the node's priority is less than the Current node's priority
+			//Insert this node
+			if (Node->Priority < Current->Next->Priority)
 			{
-				node->next = current->next;
-				current->next = node;
+				Node->Next = Current->Next;
+				Current->Next = Node;
 				return;
 			}
+			//Continue down the list
 			else
-				current = current->next;
+				Current = Current->Next;
 		}
-		current->next = node;
+		//If the End of the list is reached, add this node to the End of the list
+		Current->Next = Node;
 	}
 
+	/// <summary>
+	/// Get the highest priority node
+	/// </summary>
+	/// <returns>The tile</returns>
 	TTile* PriorityQueue::Pluck()
 	{
 		if (Head == nullptr)
 			return nullptr;
+		
+		//Get the head
+		TTile* Tile = Head->Tile;
 
-		TTile* a = Head->tile;
+		//Set the next node to the head
+		Head = Head->Next;
 
-		if (Head->next == nullptr)
-			Head = nullptr;
-		else
-			Head = Head->next;
-
-		return a;
+		return Tile;
 	}
 
+	/// <summary>
+	/// Check if the list is empty
+	/// </summary>
+	/// <returns>Whether the list is empty</returns>
 	bool PriorityQueue::IsEmpty()
 	{
 		return Head == nullptr;
@@ -87,94 +119,150 @@ public:
 
 
 
-/**
- * 
- */
+/// <summary>
+/// Blueprint function library used to do async pathfunding
+/// </summary>
 UCLASS()
 class DWELLERS_API UTileMovementFunctions : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 	
-	
 public:
+	/// <summary>
+	/// Get the Path between two points
+	/// </summary>
+	/// <param Name="Start">The starting location</param>
+	/// <param Name="End">The ending location</param>
+	/// <param Name="Cardinals">Whether to use diagonals or not</param>
+	/// <returns>The Path</returns>
 	UFUNCTION(BlueprintCallable, Category = TileMovement)
-	static TArray<FVector> GetTilePathFromPoints(FVector start, FVector end, bool cardinals);
+	static TArray<FVector> GetTilePathFromPoints(FVector Start, FVector End, bool Cardinals);
+
+	/// <summary>
+	/// Asyncronosly find a Path between an Actor and a location and move the Actor to that location
+	/// </summary>
+	/// <param Name="Target">Actor to move</param>
+	/// <param Name="End">The ending location</param>
+	/// <param Name="Cardinals">Whether to use diagonals or not</param>
 	UFUNCTION(BlueprintCallable, Category = TileMovement)
-	static void AsyncMoveActorTo(AEntity* target, FVector end, bool cardinals);
+	static void AsyncMoveActorTo(AEntity* Target, FVector End, bool Cardinals);
 
-	static TArray<TTile*> GetTilePath(TTile* start, TTile* end, bool cardinals);
-	static TArray<TTile*> GetTilePath_NoWeight(TTile* start, TTile* end, bool cardinals);
+	/// <summary>
+	/// Get the Path between two tiles
+	/// </summary>
+	/// <param Name="Start">The starting tile</param>
+	/// <param Name="End">The ending tile</param>
+	/// <param Name="Cardinals">Whether to use diagonals or not</param>
+	/// <returns>The Path</returns>
+	static TArray<TTile*> GetTilePath(TTile* Start, TTile* End, bool Cardinals);
 
-	static void GetTilePath(TArray<TTile*>* path, TTile*** tiles, int mapsize, TTile* current, TTile* end, bool cardinals);
-	static void GetTilePath_NoWeight(TArray<TTile*>* path, TTile*** tiles, int mapsize, TTile* current, TTile* end, bool cardinals);
+	/// <summary>
+	/// Get the Path between two tiles, not using tile movement weights
+	/// </summary>
+	/// <param Name="Start">The starting tile</param>
+	/// <param Name="End">The ending tile</param>
+	/// <param Name="Cardinals">Whether to use diagonals or not</param>
+	/// <returns>The Path</returns>
+	static TArray<TTile*> GetTilePath_NoWeight(TTile* Start, TTile* End, bool Cardinals);
 
+	/// <summary>
+	/// Get the Path between two tiles, used for recursive calls
+	/// </summary>
+	/// <param Name="Path">The returning path</param>
+	/// <param Name="Tiles">The map of tiles</param>
+	/// <param Name="MapSize">The Height and width of the map</param>
+	/// <param Name="Current">The current tile</param>
+	/// <param Name="End">The destination tile</param>
+	/// <param Name="Cardinals">Whether to use diagonals or not</param>
+	static void GetTilePath(TArray<TTile*>* Path, TTile*** Tiles, int MapSize, TTile* Current, TTile* End, bool Cardinals);
+
+	/// <summary>
+	/// Get the Path between two tiles, used for recursive calls, without tile movement weights
+	/// </summary>
+	/// <param Name="Path">The returning path</param>
+	/// <param Name="Tiles">The map of tiles</param>
+	/// <param Name="MapSize">The Height and width of the map</param>
+	/// <param Name="Current">The current tile</param>
+	/// <param Name="End">The destination tile</param>
+	/// <param Name="Cardinals">Whether to use diagonals or not</param>
+	static void GetTilePath_NoWeight(TArray<TTile*>* Path, TTile*** Tiles, int MapSize, TTile* Current, TTile* End, bool Cardinals);
 };
 
+/// <summary>
+/// Async task used for pathfinding
+/// </summary>
 class FFindPathTask : public FNonAbandonableTask
 {
 	friend class FAutoDeleteAsyncTask<FFindPathTask>;
 
 public:
-	FFindPathTask(AEntity* actor, FVector end, bool cardinals)
+	FFindPathTask(AEntity* Actor, FVector End, bool Cardinals)
 	{
-		this->actor = actor;
-		this->end = end;
-		this->cardinals = cardinals;
+		this->Actor = Actor;
+		this->End = End;
+		this->Cardinals = Cardinals;
 	}
 
 protected:
-	AEntity* actor;
-	FVector end;
-	bool cardinals;
+	/// <summary>
+	/// The actor to move
+	/// </summary>
+	AEntity* Actor;
+	
+	/// <summary>
+	/// The destination
+	/// </summary>
+	FVector End;
+	
+	/// <summary>
+	/// Whether to only move up, down, left, and right
+	/// </summary>
+	bool Cardinals;
 
+	/// <summary>
+	/// Do the async pathfinding work
+	/// </summary>
 	void DoWork()
 	{
-		TTile* st = GameEncapsulator::GetGame()->map->GetTileAtLocation(actor->GetActorLocation());
-		TTile* ed = GameEncapsulator::GetGame()->map->GetTileAtLocation(end);
+		//Get the starting and ending tiles
+		TTile* StartingTile = GameEncapsulator::GetGame()->Map->GetTileAtLocation(Actor->GetActorLocation());
+		TTile* EndingTile = GameEncapsulator::GetGame()->Map->GetTileAtLocation(End);
 
-		TArray<TTile*> path;
+		//The path to return
+		TArray<TTile*> Path;
 
+		//Starting time
 		double time = FPlatformTime::Seconds();
 
-		if (GameEncapsulator::GetGame()->map->PathHandler.TilesPartOfSamePath(st, ed))
+		//Find a path if both tiles are on the same road path
+		if (GameEncapsulator::GetGame()->Map->PathHandler.TilesPartOfSamePath(StartingTile, EndingTile))
 		{
-			path = GameEncapsulator::GetGame()->map->PathHandler.GetPath(st, ed);
+			Path = GameEncapsulator::GetGame()->Map->PathHandler.GetPath(StartingTile, EndingTile);
 
-			actor->MovementComponent->AddPoints(path);
-			actor->MovementComponent->DestroyOnEnd(true);
+			//Add path to movement component
+			if (Actor != nullptr && Path.Num() > 0)
+			{
+				Actor->MovementComponent->AddPoints(Path);
+				Actor->MovementComponent->DestroyOnEnd(true);
+			}
 		}
+		//Find weighted path
 		else
 		{
-			UTileMovementFunctions::GetTilePath(&path, GameEncapsulator::GetGame()->map->tiles, GameEncapsulator::GetGame()->map->mapsize, st, ed, cardinals);
+			UTileMovementFunctions::GetTilePath(&Path, GameEncapsulator::GetGame()->Map->Tiles, GameEncapsulator::GetGame()->Map->MapSize, StartingTile, EndingTile, Cardinals);
 
-			if (actor != nullptr && path.Num() > 0)
+			//Add path to movement component 
+			if (Actor != nullptr && Path.Num() > 0)
 			{
-				/*actor->MovementComponent->ResetControlPoints();
-				actor->MovementComponent->AddControlPointPosition(actor->GetActorLocation(), false);
-
-				float totalcost = 0;
-				for (int x = 0; x < path.Num(); x++)
-				{
-					totalcost += path[x]->GetCost();
-					actor->MovementComponent->AddControlPointPosition(
-						FVector(
-							path[x]->location->x * GameEncapsulator::GetGame()->map->cellsize,
-							path[x]->location->y * GameEncapsulator::GetGame()->map->cellsize,
-							path[x]->height * (GameEncapsulator::GetGame()->map->cellsize * GameEncapsulator::GetGame()->map->cliffheight)),
-						false);
-				}
-
-				actor->MovementComponent->Duration = FMath::RandRange(.75f, 1.25f) * (totalcost / path.Num()) * 25;
-				actor->MovementComponent->FinaliseControlPoints();
-				actor->MovementComponent->RestartMovement(1);*/
-
-				actor->MovementComponent->AddPoints(path);
+				Actor->MovementComponent->AddPoints(Path);
 			}
 		}
 	}
 
-	// This next section of code needs to be here.  Not important as to why.
-
+	/// <summary>
+	/// The async state id
+	/// </summary>
+	/// <returns></returns>
 	FORCEINLINE TStatId GetStatId() const
 	{
 		RETURN_QUICK_DECLARE_CYCLE_STAT(FFindPathTask, STATGROUP_ThreadPoolAsyncTasks);

@@ -45,7 +45,7 @@ typedef float FN_DECIMAL;
 class FastNoise
 {
 public:
-	explicit FastNoise(int seed = 1337) { SetSeed(seed); CalculateFractalBounding(); }
+	explicit FastNoise(int Seed = 1337) { SetSeed(Seed); CalculateFractalBounding(); }
 
 	enum NoiseType { Value, ValueFractal, Perlin, PerlinFractal, Simplex, SimplexFractal, Cellular, WhiteNoise, Cubic, CubicFractal };
 	enum Interp { Linear, Hermite, Quintic };
@@ -55,7 +55,7 @@ public:
 
 	// Sets seed used for all noise types
 	// Default: 1337
-	void SetSeed(int seed);
+	void SetSeed(int Seed);
 
 	// Returns seed used for all noise types
 	int GetSeed() const { return m_seed; }
@@ -79,11 +79,11 @@ public:
 	// Returns interpolation method used for supported noise types
 	Interp GetInterp() const { return m_interp; }
 
-	// Sets noise return type of GetNoise(...)
+	// Sets noise return TileType of GetNoise(...)
 	// Default: Simplex
 	void SetNoiseType(NoiseType noiseType) { m_noiseType = noiseType; }
 
-	// Returns the noise type used by GetNoise
+	// Returns the noise TileType used by GetNoise
 	NoiseType GetNoiseType() const { return m_noiseType; }
 
 	// Sets octave count for all fractal noise types
@@ -122,19 +122,19 @@ public:
 	// Returns the distance function used in cellular noise calculations
 	CellularDistanceFunction GetCellularDistanceFunction() const { return m_cellularDistanceFunction; }
 
-	// Sets return type from cellular noise calculations
+	// Sets return TileType from cellular noise calculations
 	// Note: NoiseLookup requires another FastNoise object be set with SetCellularNoiseLookup() to function
 	// Default: CellValue
 	void SetCellularReturnType(CellularReturnType cellularReturnType) { m_cellularReturnType = cellularReturnType; }
 
-	// Returns the return type from cellular noise calculations
+	// Returns the return TileType from cellular noise calculations
 	CellularReturnType GetCellularReturnType() const { return m_cellularReturnType; }
 
-	// Noise used to calculate a cell value if cellular return type is NoiseLookup
+	// Noise used to calculate a cell value if cellular return TileType is NoiseLookup
 	// The lookup value is acquired through GetNoise() so ensure you SetNoiseType() on the noise lookup, value, Perlin or simplex is recommended
 	void SetCellularNoiseLookup(FastNoise* noise) { m_cellularNoiseLookup = noise; }
 
-	// Returns the noise used to calculate a cell value if the cellular return type is NoiseLookup
+	// Returns the noise used to calculate a cell value if the cellular return TileType is NoiseLookup
 	FastNoise* GetCellularNoiseLookup() const { return m_cellularNoiseLookup; }
 
 	// Sets the 2 distance indices used for distance2 return types

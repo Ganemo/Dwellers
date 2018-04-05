@@ -7,50 +7,79 @@
 #include "TileObject.h"
 #include "TileMovementFunctions.h"
 
-/**
- * 
- */
+/// <summary>
+/// An action that can be fired from player mouse clicks,
+/// Pure abstract class, should not be instantiated
+/// </summary>
 class DWELLERS_API PlayerAction
 {
 public:
 	PlayerAction::PlayerAction() {}
 	virtual PlayerAction::~PlayerAction() {}
 
-	virtual void PlayerAction::ClickDown(TTile* hittile) {}
-	virtual void PlayerAction::ClickTick(TTile* hittile) {}
-	virtual void PlayerAction::ClickUp(TTile* hittile) {}
+	/// <summary>
+	/// Function fired by clicking down
+	/// </summary>
+	/// <param Name="HitTile">The tile hit when this function is called</param>
+	virtual void PlayerAction::ClickDown(TTile* HitTile) = 0;
+
+	/// <summary>
+	/// Function fired every frame
+	/// </summary>
+	/// <param Name="HitTile">The tile hit when this function is called</param>
+	virtual void PlayerAction::ClickTick(TTile* HitTile) = 0;
+
+	/// <summary>
+	/// Function fired by clicking up
+	/// </summary>
+	/// <param Name="HitTile">The tile hit when this function is called</param>
+	virtual void PlayerAction::ClickUp(TTile* HitTile) = 0;
 };
 
+/// <summary>
+/// Makes a road between two tiles
+/// </summary>
 class DWELLERS_API PlayerAction_MakeRoad : public PlayerAction
 {
 private:
-	TTile* firsttile;
+	TTile* FirstTile;
 
 public:
 	PlayerAction_MakeRoad::~PlayerAction_MakeRoad() override {}
 
-	void PlayerAction_MakeRoad::ClickDown(TTile* hittile) override
+	/// <summary>
+	/// Store the first tile hit when clicked
+	/// </summary>
+	/// <param Name="HitTile">The tile hit</param>
+	void PlayerAction_MakeRoad::ClickDown(TTile* HitTile) override
 	{
-		firsttile = hittile;
+		FirstTile = HitTile;
 	}
 
-	void PlayerAction_MakeRoad::ClickUp(TTile* hittile) override
+	void PlayerAction_MakeRoad::ClickTick(TTile* HitTile) override {}
+
+	/// <summary>
+	/// Make a road between tiles
+	/// </summary>
+	/// <param Name="HitTile">The tile hit</param>
+	void PlayerAction_MakeRoad::ClickUp(TTile* HitTile) override
 	{
-		if (firsttile == hittile)
-		{
-			GameEncapsulator::GetGame()->map->MakeTileRoad(firsttile);
-		}
+		//If the same tile is hit again, make that tile a road tile
+		if (FirstTile == HitTile)
+			GameEncapsulator::GetGame()->Map->MakeTileRoad(FirstTile);
 		else
 		{
-			TArray<TTile*> tiles = UTileMovementFunctions::GetTilePath_NoWeight(firsttile, hittile, true);
+			//Get a Path between tile locations
+			TArray<TTile*> Tiles = UTileMovementFunctions::GetTilePath_NoWeight(FirstTile, HitTile, true);
 
-			for (int x = 0; x < tiles.Num(); ++x)
+			//Made all the tiles in the Path a road
+			for (int x = 0; x < Tiles.Num(); ++x)
 			{
-				GameEncapsulator::GetGame()->map->MakeTileRoad(tiles[x]);
+				GameEncapsulator::GetGame()->Map->MakeTileRoad(Tiles[x]);
 			}
 		}
 
-		firsttile = nullptr;
+		//reset for the next call of this action
+		FirstTile = nullptr;
 	}
-
 };

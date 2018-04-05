@@ -11,30 +11,35 @@ GameEncapsulator::GameEncapsulator()
 
 GameEncapsulator::~GameEncapsulator()
 {
-	delete map;
+	delete Map;
 }
 
-void GameEncapsulator::CreateGame(int mapsize, int chunksize, int cellsize, float cliffheight)
+void GameEncapsulator::CreateGame(int Mapsize, int Chunksize, int Cellsize, float Cellheight)
 {
+	//Destroy old game state if it exists
 	if (gameencapsulator != nullptr)
 		delete gameencapsulator;
 
+	//Create the new singleton instance
 	gameencapsulator = new GameEncapsulator();
 
-	gameencapsulator->map = new WorldMap();
+	//Create the new world map
+	gameencapsulator->Map = new WorldMap();
 
-	gameencapsulator->map->mapsize = mapsize;
-	gameencapsulator->map->chunksize = chunksize;
-	gameencapsulator->map->cellsize = cellsize;
-	gameencapsulator->map->cliffheight = cliffheight;
+	//Initialize the map properties
+	gameencapsulator->Map->MapSize = Mapsize;
+	gameencapsulator->Map->ChunkSize = Chunksize;
+	gameencapsulator->Map->CellSize = Cellsize;
+	gameencapsulator->Map->CliffHeight = Cellheight;
 
-	gameencapsulator->map->tiles = new TTile**[mapsize];
-	for (int x = 0; x < mapsize; ++x)
+	//Initialize the map's tiles to null
+	gameencapsulator->Map->Tiles = new TTile**[Mapsize];
+	for (int x = 0; x < Mapsize; ++x)
 	{
-		gameencapsulator->map->tiles[x] = new TTile*[mapsize];
-		for (int y = 0; y < mapsize; ++y)
+		gameencapsulator->Map->Tiles[x] = new TTile*[Mapsize];
+		for (int y = 0; y < Mapsize; ++y)
 		{
-			gameencapsulator->map->tiles[x][y] = nullptr;
+			gameencapsulator->Map->Tiles[x][y] = nullptr;
 		}
 	}
 }

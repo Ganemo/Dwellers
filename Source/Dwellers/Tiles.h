@@ -7,9 +7,9 @@
 #include "TileObject.h"
 #include "FunctionLibrary.h"
 
-/**
- * 
- */
+/// <summary>
+/// The category a tile is in
+/// </summary>
 enum ETileType
 {
 	Ground,
@@ -18,6 +18,9 @@ enum ETileType
 	Cliff,
 };
 
+/// <summary>
+/// Structure containing tile locations
+/// </summary>
 class DWELLERS_API FTileLoc
 {
 
@@ -32,16 +35,19 @@ public:
 	}
 };
 
+/// <summary>
+/// Tile structure used to hold tile information
+/// </summary>
 class DWELLERS_API TTile
 {
 
 public:
 	FTileLoc * location;
-	float height;
+	float Height;
 
-	int chunknum = -1;
+	int ChunkNum = -1;
 
-	ETileType type;
+	ETileType TileType;
 
 	class FTileObject* object = nullptr;
 
@@ -50,18 +56,41 @@ public:
 	TTile::TTile(FTileLoc* loc, float hght)
 	{
 		location = loc;
-		height = hght;
+		Height = hght;
 	}
 
-	FVector TTile::GetTileLocationAsVector();
+	/// <summary>
+	/// Get the Tile's location, represented as a standard 3D vector
+	/// </summary>
+	FVector GetTileLocationAsVector();
 
-	void TTile::RemoveObject();
+	/// <summary>
+	/// Remove the object on the tile, calling it's removal functions aswell
+	/// </summary>
+	void RemoveObject();
 
+	/// <summary>
+	/// Whether this tile can be walked over by a movement actor
+	/// </summary>
+	/// <returns></returns>
 	virtual bool TTile::IsTraversable() { return true; }
+	
+	/// <summary>
+	/// Get the original color of the tile
+	/// </summary>
+	/// <returns></returns>
 	virtual FColor TTile::GetColor() { return FColor(); }
+
+	/// <summary>
+	/// Get the cost to traverse this tile, takes in to account the tile object
+	/// </summary>
+	/// <returns></returns>
 	virtual float TTile::GetCost() { return 1.0f; }
 };
 
+/// <summary>
+/// A tile representing a tile that is between at least two tiles of different heights
+/// </summary>
 class DWELLERS_API TCliffTile : public TTile
 {
 	bool IsStairs = false;
@@ -69,7 +98,7 @@ class DWELLERS_API TCliffTile : public TTile
 public:
 	TCliffTile::TCliffTile(FTileLoc* loc, float hght) : TTile(loc, hght)
 	{
-		type = ETileType::Cliff;
+		TileType = ETileType::Cliff;
 	}
 
 	bool TCliffTile::IsTraversable() override
@@ -83,6 +112,9 @@ public:
 	}
 };
 
+/// <summary>
+/// A tile representing a tile that is between one water tile and one land tile
+/// </summary>
 class DWELLERS_API TWaterEdgeTile : public TTile
 {
 	bool IsBridge = false;
@@ -91,7 +123,7 @@ public:
 
 	TWaterEdgeTile::TWaterEdgeTile(FTileLoc* loc, float hght) : TTile(loc, hght)
 	{
-		type = ETileType::WaterEdge;
+		TileType = ETileType::WaterEdge;
 	}
 
 	bool TWaterEdgeTile::IsTraversable() override
@@ -105,6 +137,9 @@ public:
 	}
 };
 
+/// <summary>
+/// A tile representing a normal ground tile, which can have foliage and be built on
+/// </summary>
 class DWELLERS_API TGroundTile : public TTile
 {
 
@@ -113,7 +148,7 @@ public:
 
 	TGroundTile::TGroundTile(FTileLoc* loc, float hght) : TTile(loc, hght)
 	{
-		type = ETileType::Ground;
+		TileType = ETileType::Ground;
 	}
 
 	bool TGroundTile::IsTraversable() override
@@ -129,13 +164,16 @@ public:
 	float TGroundTile::GetCost() override;
 };
 
+/// <summary>
+/// A tile representing a water tile
+/// </summary>
 class DWELLERS_API TWaterTile : public TTile
 {
 
 public:
 	TWaterTile::TWaterTile(FTileLoc* loc, float hght) : TTile(loc, hght)
 	{
-		type = ETileType::Water;
+		TileType = ETileType::Water;
 	}
 
 	bool TWaterTile::IsTraversable() override

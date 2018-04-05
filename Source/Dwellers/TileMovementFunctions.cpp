@@ -5,365 +5,401 @@
 #include "TileObject.h"
 #include "Async/TaskGraphInterfaces.h"
 
-TTile* GetTileAtLocation(FVector loc, int cellsize, TTile*** tiles, int mapsize)
+/// <summary>
+/// Get the tile at a world location
+/// </summary>
+/// <param Name="Location">The FVector location</param>
+/// <param Name="CellSize">The Size of a cell on the map</param>
+/// <param Name="Tiles">The 2d array of tiles</param>
+/// <param Name="MapSize">The length and width of the Tiles array</param>
+/// <returns>The Tile</returns>
+TTile* GetTileAtLocation(FVector Location, int CellSize, TTile*** Tiles, int MapSize)
 {
-	int x = ((int)loc.X) / cellsize;
-	int y = ((int)loc.Y) / cellsize;
+	//Convert the location to the tile indexes in Tiles
+	int x = ((int)Location.X) / CellSize;
+	int y = ((int)Location.Y) / CellSize;
 
-	if (x < 0 || x >= mapsize || y < 0 || y >= mapsize)
+	//Make sure the locations are valid
+	if (x < 0 || x >= MapSize || y < 0 || y >= MapSize)
 		return nullptr;
 
-	return tiles[x][y];
+	return Tiles[x][y];
 }
 
-TArray<TTile*> GetAdjacentTiles(TTile*** tiles, TTile* tile, int mapsize)
+/// <summary>
+/// Get the tiles adjacent to this tile
+/// </summary>
+/// <param Name="Tiles">The 2d array of tiles</param>
+/// <param Name="Tile">The tile</param>
+/// <param Name="MapSize">The length and width of the tiles array</param>
+/// <returns></returns>
+TArray<TTile*> GetAdjacentTiles(TTile*** Tiles, TTile* Tile, int MapSize)
 {
-	TArray<TTile*> returner;
+	//The tiles to return
+	TArray<TTile*> Adj;
 
-	int x = tile->location->x;
-	int y = tile->location->y;
+	//Get the location of the tile
+	int x = Tile->location->x;
+	int y = Tile->location->y;
 
-	if(x + 1 < mapsize)
-		returner.Add(tiles[x + 1][y]);
+	//Get the tile to the right
+	if(x + 1 < MapSize)
+		Adj.Add(Tiles[x + 1][y]);
+	//Get the tile to the left
 	if (x - 1 >= 0)
-		returner.Add(tiles[x - 1][y]);
-	if (y + 1 < mapsize)
-		returner.Add(tiles[x][y + 1]);
+		Adj.Add(Tiles[x - 1][y]);
+	//Get the tile above
+	if (y + 1 < MapSize)
+		Adj.Add(Tiles[x][y + 1]);
+	//Get the tile below
 	if (y - 1 >= 0)
-		returner.Add(tiles[x][y - 1]);
+		Adj.Add(Tiles[x][y - 1]);
 
-	return returner;
+	return Adj;
 }
 
-bool AreVectorsInAStraightLine(FVector2D* v1, int v1height, FVector2D* v2, int v2height)
+/// <summary>
+/// Check if two vectors are in a direct line on the map (no diagonals)
+/// </summary>
+/// <param Name="V1">The first vector</param>
+/// <param Name="V1Height">The first vector's Height</param>
+/// <param Name="V2">The second vector</param>
+/// <param Name="V2Height">The second vector's Height</param>
+/// <returns></returns>
+bool AreVectorsInAStraightLine(FVector2D* V1, int V1Height, FVector2D* V2, int V2Height)
 {
-	if ((v1->X == v2->X || v1->Y == v2->Y) && v1height == v2height)
+	//If they are the same Height and in a direct line
+	if (((V1->X == V2->X) != (V1->Y == V2->Y)) && V1Height == V2Height)
 		return true;
 	else
 		return false;
 }
 
-float GetHeuristic(float D, TTile* current, TTile* target, bool cardinals)
+/// <summary>
+/// Get a manhattan heuristic value
+/// </summary>
+/// <param Name="D">Heuristic scale</param>
+/// <param Name="Current">The current tile</param>
+/// <param Name="Target">The target tile</param>
+/// <param Name="Cardinals">Whether you can use diagonals</param>
+/// <returns>The heuristic</returns>
+float GetHeuristic(float D, TTile* Current, TTile* Target, bool Cardinals)
 {
-	float a = FMath::Abs(current->location->x - target->location->x);
-	float b = FMath::Abs(current->location->y - target->location->y);
+	float a = FMath::Abs(Current->location->x - Target->location->x);
+	float b = FMath::Abs(Current->location->y - Target->location->y);
 
-	if (cardinals)
+	if (Cardinals)
 		return D * (a + b);
 	else
 		return D * (a + b) - D * FMath::Min(a, b);
 }
 
-TTile* GetTile(int x, int y, TTile*** map, int mapsize)
+/// <summary>
+/// Get a tile at index from 2D Map
+/// </summary>
+/// <param Name="x">The x index</param>
+/// <param Name="y">The y index</param>
+/// <param Name="Map">The 2D map</param>
+/// <param Name="MapSize">The 2D map Height and width</param>
+/// <returns></returns>
+TTile* GetTile(int x, int y, TTile*** Map, int MapSize)
 {
-	if (x >= mapsize || y >= mapsize || x < 0 || y < 0)
+	if (x >= MapSize || y >= MapSize || x < 0 || y < 0)
 		return nullptr;
 	else
-		return map[x][y];
+		return Map[x][y];
 }
 
-TArray<TTile*> GetNeighbors(TTile* current, TTile*** map, int mapsize, bool cardinals)
+/// <summary>
+/// Get all the neighbors of the current tile
+/// </summary>
+/// <param Name="Current">The current tile</param>
+/// <param Name="Map">The 2D map</param>
+/// <param Name="MapSize">The 2D map Height and width</param>
+/// <param Name="Cardinals">Whether you can use diagonals</param>
+/// <returns></returns>
+TArray<TTile*> GetNeighbors(TTile* Current, TTile*** Map, int MapSize, bool Cardinals)
 {
-	int x = current->location->x;
-	int y = current->location->y;
+	//Get x and y index
+	int x = Current->location->x;
+	int y = Current->location->y;
 
-	TArray<TTile*> returner;
+	TArray<TTile*> Neigh;
 
-	TTile* ti;
+	TTile* Tile;
 
-	ti = GetTile(x + 1, y, map, mapsize);
-	if (ti != nullptr)
-		returner.Add(ti);
+	//Get the right tile
+	Tile = GetTile(x + 1, y, Map, MapSize);
+	if (Tile != nullptr)
+		Neigh.Add(Tile);
 
-	ti = GetTile(x, y + 1, map, mapsize);
-	if (ti != nullptr)
-		returner.Add(ti);
+	//Get the above tile
+	Tile = GetTile(x, y + 1, Map, MapSize);
+	if (Tile != nullptr)
+		Neigh.Add(Tile);
 
-	ti = GetTile(x - 1, y, map, mapsize);
-	if (ti != nullptr)
-		returner.Add(ti);
+	//Get the left tile
+	Tile = GetTile(x - 1, y, Map, MapSize);
+	if (Tile != nullptr)
+		Neigh.Add(Tile);
 
-	ti = GetTile(x, y - 1, map, mapsize);
-	if (ti != nullptr)
-		returner.Add(ti);
+	//Get the below tile
+	Tile = GetTile(x, y - 1, Map, MapSize);
+	if (Tile != nullptr)
+		Neigh.Add(Tile);
 
-	if (cardinals)
-		return returner;
+	//Return if we are only using cardinal directions
+	if (Cardinals)
+		return Neigh;
 
-	ti = GetTile(x + 1, y + 1, map, mapsize);
-	if (ti != nullptr)
-		returner.Add(ti);
+	//Get the above right tile
+	Tile = GetTile(x + 1, y + 1, Map, MapSize);
+	if (Tile != nullptr)
+		Neigh.Add(Tile);
 
-	ti = GetTile(x + 1, y - 1, map, mapsize);
-	if (ti != nullptr)
-		returner.Add(ti);
+	//Get the below right tile
+	Tile = GetTile(x + 1, y - 1, Map, MapSize);
+	if (Tile != nullptr)
+		Neigh.Add(Tile);
 
-	ti = GetTile(x - 1, y + 1, map, mapsize);
-	if (ti != nullptr)
-		returner.Add(ti);
+	//Get the above right tile
+	Tile = GetTile(x - 1, y + 1, Map, MapSize);
+	if (Tile != nullptr)
+		Neigh.Add(Tile);
 
-	ti = GetTile(x - 1, y - 1, map, mapsize);
-	if (ti != nullptr)
-		returner.Add(ti);
+	//Get the below left tile
+	Tile = GetTile(x - 1, y - 1, Map, MapSize);
+	if (Tile != nullptr)
+		Neigh.Add(Tile);
 
-	return returner;
+	return Neigh;
 }
 
-TArray<FVector> UTileMovementFunctions::GetTilePathFromPoints(FVector start, FVector end, bool cardinals)
+TArray<FVector> UTileMovementFunctions::GetTilePathFromPoints(FVector Start, FVector End, bool Cardinals)
 {
-	TArray<FVector> locations;
+	TArray<FVector> Locations;
+	
+	//Get the world map
+	WorldMap* Map = GameEncapsulator::GetGame()->Map;
 
-	WorldMap* map = GameEncapsulator::GetGame()->map;
+	TTile* StartingTile = Map->GetTileAtLocation(Start + GameEncapsulator::GetGame()->Map->CellSize / 2);
+	TTile* EndingTile = Map->GetTileAtLocation(End + GameEncapsulator::GetGame()->Map->CellSize / 2);
 
-	TTile* st = map->GetTileAtLocation(start + GameEncapsulator::GetGame()->map->cellsize / 2);
-	TTile* ed = map->GetTileAtLocation(end + GameEncapsulator::GetGame()->map->cellsize / 2);
+	//Make sure both tiles are valid
+	if (StartingTile == nullptr || EndingTile == nullptr)
+		return Locations;
 
-	if (st == nullptr || ed == nullptr)
-		return locations;
+	//Make sure both tiles are in the same Chunk
+	if (StartingTile->ChunkNum != EndingTile->ChunkNum)
+		return Locations;
 
-	if (st->chunknum != ed->chunknum)
-		return locations;
+	TArray<TTile*> Path;
 
-	TArray<TTile*> path;
+	UTileMovementFunctions::GetTilePath(&Path, Map->Tiles, Map->MapSize, StartingTile, EndingTile, Cardinals);
 
-	double time = FPlatformTime::Seconds();
-
-	UTileMovementFunctions::GetTilePath(&path, map->tiles, map->mapsize, st, ed, cardinals);
-
-	//UE_LOG(LogTemp, Log, TEXT("Path Gen Time: %f"), FPlatformTime::Seconds() - time);
-
-	int tilecount = path.Num();
-	int next = 0;
-	for (int x = 0; x < tilecount; x = next)
+	//Convert tiles to location
+	int tilecount = Path.Num();
+	int Next = 0;
+	for (int x = 0; x < tilecount; x = Next)
 	{
-		locations.Add(FVector(path[x]->location->x * map->cellsize, path[x]->location->y * map->cellsize, path[x]->height * (map->cellsize * map->cliffheight)));
-		next = x + 1;
+		Locations.Add(FVector(Path[x]->location->x * Map->CellSize, Path[x]->location->y * Map->CellSize, Path[x]->Height * (Map->CellSize * Map->CliffHeight)));
+		Next = x + 1;
 	}
 
-	return locations;
+	return Locations;
 }
 
-TArray<TTile*> UTileMovementFunctions::GetTilePath(TTile* start, TTile* end, bool cardinals)
+TArray<TTile*> UTileMovementFunctions::GetTilePath(TTile* Start, TTile* End, bool Cardinals)
 {
-	WorldMap* map = GameEncapsulator::GetGame()->map;
+	//Get the world map
+	WorldMap* Map = GameEncapsulator::GetGame()->Map;
 
-	TArray<TTile*> path;
+	TArray<TTile*> Path;
 
-	if (start == nullptr || end == nullptr)
-		return path;
+	//Make sure both tiles are valid
+	if (Start == nullptr || End == nullptr)
+		return Path;
 
-	if (start->chunknum != end->chunknum)
-		return path;
+	//Make sure both tiles are in the same Chunk
+	if (Start->ChunkNum != End->ChunkNum)
+		return Path;
 
-	//double time = FPlatformTime::Seconds();
+	UTileMovementFunctions::GetTilePath(&Path, Map->Tiles, Map->MapSize, Start, End, Cardinals);
 
-	UTileMovementFunctions::GetTilePath(&path, map->tiles, map->mapsize, start, end, cardinals);
-
-	//UE_LOG(LogTemp, Log, TEXT("Path Gen Time: %f"), FPlatformTime::Seconds() - time);
-
-	return path;
+	return Path;
 }
 
-TArray<TTile*> UTileMovementFunctions::GetTilePath_NoWeight(TTile* start, TTile* end, bool cardinals)
+TArray<TTile*> UTileMovementFunctions::GetTilePath_NoWeight(TTile* Start, TTile* End, bool Cardinals)
 {
-	WorldMap* map = GameEncapsulator::GetGame()->map;
+	//Get the world map
+	WorldMap* Map = GameEncapsulator::GetGame()->Map;
 
-	TArray<TTile*> path;
+	TArray<TTile*> Path;
 
-	if (start == nullptr || end == nullptr)
-		return path;
+	//Make sure both tiles are valid
+	if (Start == nullptr || End == nullptr)
+		return Path;
 
-	if (start->chunknum != end->chunknum)
-		return path;
+	//Make sure both tiles are in the same Chunk
+	if (Start->ChunkNum != End->ChunkNum)
+		return Path;
 
-	//double time = FPlatformTime::Seconds();
+	UTileMovementFunctions::GetTilePath_NoWeight(&Path, Map->Tiles, Map->MapSize, Start, End, Cardinals);
 
-	UTileMovementFunctions::GetTilePath_NoWeight(&path, map->tiles, map->mapsize, start, end, cardinals);
-
-	//UE_LOG(LogTemp, Log, TEXT("Path Gen Time: %f"), FPlatformTime::Seconds() - time);
-
-	return path;
+	return Path;
 }
 
-void UTileMovementFunctions::AsyncMoveActorTo(AEntity* target, FVector end, bool cardinals)
+void UTileMovementFunctions::AsyncMoveActorTo(AEntity* Target, FVector End, bool Cardinals)
 {
-	FAutoDeleteAsyncTask<FFindPathTask>* task = new FAutoDeleteAsyncTask<FFindPathTask>(target, end, cardinals);
-	task->StartBackgroundTask();
+	//Start a new async pathfinding task
+	FAutoDeleteAsyncTask<FFindPathTask>* Task = new FAutoDeleteAsyncTask<FFindPathTask>(Target, End, Cardinals);
+	Task->StartBackgroundTask();
 }
 
-void UTileMovementFunctions::GetTilePath(TArray<TTile*>* path, TTile*** tiles, int mapsize, TTile* start, TTile* end, bool cardinals)
+void UTileMovementFunctions::GetTilePath(TArray<TTile*>* Path, TTile*** Tiles, int MapSize, TTile* Start, TTile* End, bool Cardinals)
 {
-	PriorityQueue frontier;
-	frontier.AddNode(new PriorityNode(start, 0));
+	PriorityQueue Frontier;
+	Frontier.AddNode(new PriorityNode(Start, 0));
 
-	TMap<TTile*, TTile*> camefrom;
-	camefrom.Add(start, start);
-	TMap<TTile*, float> costsofar;
-	costsofar.Add(start, 0);
+	TMap<TTile*, TTile*> CameFrom;
+	CameFrom.Add(Start, Start);
+	TMap<TTile*, float> CostSoFar;
+	CostSoFar.Add(Start, 0);
 
-	bool endreached = false;
+	bool bEndReached = false;
 
-	while (!frontier.IsEmpty())
+	/////Perform A* pathfinding//////
+	 
+	//Loop while frontier contains elements
+	while (!Frontier.IsEmpty())
 	{
-		TTile* current = frontier.Pluck();
+		//Pluck from the priority queue
+		TTile* Current = Frontier.Pluck();
 
-		if (current == end)
+		// The end is found, break
+		if (Current == End)
 		{
-			endreached = true;
+			bEndReached = true;
 			break;
 		}
 
-		TArray<TTile*> neighbors = GetNeighbors(current, tiles, mapsize, cardinals);
-		for (TTile* next : neighbors)
+		//Get the neighbors of the current tile
+		TArray<TTile*> Neighbors = GetNeighbors(Current, Tiles, MapSize, Cardinals);
+
+		//Iterate over neighbors
+		for (TTile* Next : Neighbors)
 		{
-			if (next == nullptr || !next->IsTraversable())
+			//Only look at valid, traversable tiles
+			if (Next == nullptr || !Next->IsTraversable())
 				continue;
 
-			float newcost = costsofar[current] + next->GetCost();
-			if (costsofar.Find(next) == nullptr || newcost < costsofar[next])
+			//Calculate the costs to get to this node
+			float NewCost = CostSoFar[Current] + Next->GetCost();
+
+			//See if the tile has been checked or if it has a higher path cost
+			if (CostSoFar.Find(Next) == nullptr || NewCost < CostSoFar[Next])
 			{
-				costsofar.Add(next, newcost);
-				float priority = GetHeuristic(next->GetCost(), next, end, cardinals);
-				frontier.AddNode(new PriorityNode(next, priority));
-				camefrom.Add(next, current);
+				CostSoFar.Add(Next, NewCost);
+				//Get the path heuristic used for priority
+				float Priority = GetHeuristic(Next->GetCost(), Next, End, Cardinals);
+				Frontier.AddNode(new PriorityNode(Next, Priority));
+				CameFrom.Add(Next, Current);
 			}
 		}
 	}
 
-	if (endreached == false)
+	//End if we never reached the end tile
+	if (bEndReached == false)
 		return;
 
-	TTile* n = end;
-	while (n != start)
+	//Backtrace the path
+	TTile* n = End;
+	while (n != Start)
 	{
-		path->Add(n);
-		TTile** a = camefrom.Find(n);
+		Path->Add(n);
+		TTile** a = CameFrom.Find(n);
 		if (a == nullptr)
 			return;
 		else
 			n = *a;
 	}
 
-	path->Add(start);
-
-	Algo::Reverse(*path);
+	Path->Add(Start);
+	
+	//Reverse the path
+	Algo::Reverse(*Path);
 }
 
-void UTileMovementFunctions::GetTilePath_NoWeight(TArray<TTile*>* path, TTile*** tiles, int mapsize, TTile* start, TTile* end, bool cardinals)
+void UTileMovementFunctions::GetTilePath_NoWeight(TArray<TTile*>* Path, TTile*** Tiles, int MapSize, TTile* Start, TTile* End, bool Cardinals)
 {
-	PriorityQueue frontier;
-	frontier.AddNode(new PriorityNode(start, 0));
+	PriorityQueue Frontier;
+	Frontier.AddNode(new PriorityNode(Start, 0));
 
-	TMap<TTile*, TTile*> camefrom;
-	camefrom.Add(start, start);
-	TMap<TTile*, float> costsofar;
-	costsofar.Add(start, 0);
+	TMap<TTile*, TTile*> CameFrom;
+	CameFrom.Add(Start, Start);
+	TMap<TTile*, float> CostSoFar;
+	CostSoFar.Add(Start, 0);
 
-	bool endreached = false;
+	bool bEndReached = false;
 
-	while (!frontier.IsEmpty())
+	/////Perform A* pathfinding//////
+
+	//Loop while frontier contains elements
+	while (!Frontier.IsEmpty())
 	{
-		TTile* current = frontier.Pluck();
+		//Pluck from the priority queue
+		TTile* Current = Frontier.Pluck();
 
-		if (current == end)
+		// The end is found, break
+		if (Current == End)
 		{
-			endreached = true;
+			bEndReached = true;
 			break;
 		}
 
-		TArray<TTile*> neighbors = GetNeighbors(current, tiles, mapsize, cardinals);
-		for (TTile* next : neighbors)
+		//Get the neighbors of the current tile
+		TArray<TTile*> Neighbors = GetNeighbors(Current, Tiles, MapSize, Cardinals);
+
+		//Iterate over neighbors
+		for (TTile* Next : Neighbors)
 		{
-			if (next == nullptr || !next->IsTraversable())
+			//Only look at valid, traversable tiles
+			if (Next == nullptr || !Next->IsTraversable())
 				continue;
 
-			float newcost = costsofar[current] + 1;
-			if (costsofar.Find(next) == nullptr || newcost < costsofar[next])
+			//Calculate the costs to get to this node
+			float NewCost = CostSoFar[Current] + 1;
+
+			//See if the tile has been checked or if it has a higher path cost
+			if (CostSoFar.Find(Next) == nullptr || NewCost < CostSoFar[Next])
 			{
-				costsofar.Add(next, newcost);
-				float priority = newcost + GetHeuristic(next->GetCost(), next, end, cardinals);
-				frontier.AddNode(new PriorityNode(next, priority));
-				camefrom.Add(next, current);
+				CostSoFar.Add(Next, NewCost);
+				//Get the path heuristic used for priority
+				float Priority = GetHeuristic(Next->GetCost(), Next, End, Cardinals);
+				Frontier.AddNode(new PriorityNode(Next, Priority));
+				CameFrom.Add(Next, Current);
 			}
 		}
 	}
 
-	if (endreached == false)
+	//End if we never reached the end tile
+	if (bEndReached == false)
 		return;
 
-	TTile* n = end;
-	while (n != start)
+	//Backtrace the path
+	TTile* n = End;
+	while (n != Start)
 	{
-		path->Add(n);
-		TTile** a = camefrom.Find(n);
+		Path->Add(n);
+		TTile** a = CameFrom.Find(n);
 		if (a == nullptr)
 			return;
 		else
 			n = *a;
 	}
 
-	Algo::Reverse(*path);
+	Path->Add(Start);
+
+	//Reverse the path
+	Algo::Reverse(*Path);
 }
-
-
-/*
-	TArray<TTile*> returner;
-
-	if (start == nullptr || end == nullptr)
-		return returner;
-
-	int minDistance = 9999999;
-
-	TArray<TTile*> visitedNodes;
-	TMap<TTile*, TTile*> parentNodes;
-
-	TArray<TTile*> queue;
-	queue.Add(start);
-
-	while (queue.Num() > 0)
-	{
-		TTile* focus = queue[0];
-		queue.RemoveAt(0);
-
-		//building path
-		if (focus == end)
-		{
-			TArray<TTile*> pth;
-			TTile* node = end;
-			while (node != nullptr && node != start)
-			{
-				pth.Add(node);
-				TTile** adsf = parentNodes.Find(node);
-				node = adsf == nullptr ? nullptr : *adsf;
-			}
-			pth.Add(start);
-
-			if (pth.Num() < minDistance)
-			{
-				returner.Append(pth);
-				minDistance = pth.Num();
-			}
-		}
-
-		if (!visitedNodes.Contains(focus))
-			visitedNodes.Add(focus);
-		else
-			continue;
-
-		TArray<TTile*> adjacents = GetAdjacentTiles(tiles, focus, mapsize);
-
-		for (int x = 0; x < adjacents.Num(); x++)
-		{
-			if (!visitedNodes.Contains(adjacents[x]) && !queue.Contains(adjacents[x]) && adjacents[x]->IsTraversable())
-			{
-				queue.Add(adjacents[x]);
-				parentNodes.Add(adjacents[x], focus);
-			}
-		}
-	}
-
-	if (returner.Num() <= 0)
-		returner.Add(start);
-
-	return returner;
-*/
